@@ -129,53 +129,101 @@ const SECTOR_COLORS = {
 ```
 
 ```js
-// Track map with selected sector highlighted
-html`<div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin-bottom:1rem">
-  <!-- Track map -->
-  <div style="position:relative;flex-shrink:0;width:260px">
-    <img src="${trackMapUrl}" style="width:260px;height:260px;object-fit:contain;border-radius:8px;background:var(--theme-background-alt);padding:8px" alt="NBR sector map">
-    <!-- Sector labels overlay — highlight selected sector with a glowing badge -->
-    <div style="position:absolute;top:8px;left:8px;right:8px;bottom:8px;pointer-events:none">
-      ${sectorNums.map(s => {
-        const isSelected = `S${s}` === sectorSel;
-        const color = SECTOR_COLORS[s] ?? "#888";
-        return html`<div style="
-          display:inline-block;
-          margin:2px;
-          padding:2px 7px;
-          border-radius:12px;
-          font-size:11px;
-          font-weight:700;
-          background:${isSelected ? color : 'rgba(0,0,0,0.45)'};
-          color:${isSelected ? '#fff' : color};
-          border:1.5px solid ${color};
-          box-shadow:${isSelected ? `0 0 8px ${color}` : 'none'};
-          transition:all .2s;
-        ">S${s}</div>`;
-      })}
-    </div>
+const selectedSectorNum = +sectorSel.slice(1);
+const selectedColor = SECTOR_COLORS[selectedSectorNum] ?? "#888";
+
+function fmtSectorTime(sec) {
+  if (sec == null) return "—";
+  return sec < 60 ? `${sec.toFixed(3)}s` : `${Math.floor(sec/60)}:${(sec%60).toFixed(3).padStart(6,'0')}`;
+}
+```
+
+```js
+html`<div class="track-map-card" style="--sector-color:${selectedColor}">
+
+  <!-- Map image — glows in the selected sector colour -->
+  <div class="track-map-img-wrap" style="box-shadow:0 0 0 2px ${selectedColor}40, 0 0 24px ${selectedColor}30">
+    <img src="${trackMapUrl}" alt="Nürburgring 24h — sector map" class="track-map-img">
   </div>
-  <!-- Quick sector legend -->
-  <div style="flex:1;min-width:160px">
-    <div style="font-size:.78em;opacity:.5;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Sectors</div>
+
+  <!-- Sector pills — one per sector, active one highlighted -->
+  <div class="track-map-pills">
     ${sectorNums.map(s => {
-      const color = SECTOR_COLORS[s] ?? "#888";
-      const isSelected = `S${s}` === sectorSel;
+      const c = SECTOR_COLORS[s] ?? "#888";
+      const active = s === selectedSectorNum;
       const rows = stintSectors.filter(r => r.sector === s);
       const best = rows.length ? Math.min(...rows.map(r => r.sector_time_sec)) : null;
-      return html`<div style="
-        display:flex;align-items:center;gap:8px;
-        padding:3px 6px;border-radius:5px;margin-bottom:2px;
-        background:${isSelected ? 'var(--theme-background-alt)' : 'transparent'};
-        border-left:3px solid ${isSelected ? color : 'transparent'};
-      ">
-        <span style="font-weight:700;color:${color};font-size:.85em;min-width:20px">S${s}</span>
-        <span style="font-size:.8em;opacity:.65">${best != null ? (best < 60 ? best.toFixed(2)+'s' : Math.floor(best/60)+':'+(best%60).toFixed(3).padStart(6,'0')) : '—'}</span>
-        <span style="font-size:.72em;opacity:.35">${rows.length ? `${[...new Set(rows.map(r=>r.comp_driver))].length} drivers` : ''}</span>
+      const p1driver = rows.find(r => r.rank === 1);
+      return html`<div class="sector-pill ${active ? 'sector-pill--active' : ''}"
+        style="--c:${c};border-color:${active ? c : c+'55'};background:${active ? c+'22' : 'transparent'}">
+        <span class="sector-pill-label" style="color:${c}">S${s}</span>
+        <span class="sector-pill-time">${fmtSectorTime(best)}</span>
+        ${active && p1driver ? html`<span class="sector-pill-p1">P1 ${p1driver.comp_driver} #${p1driver.comp_car_no}</span>` : ''}
       </div>`;
     })}
   </div>
-</div>`
+
+</div>
+
+<style>
+.track-map-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 1.2rem;
+}
+.track-map-img-wrap {
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--theme-background-alt);
+  transition: box-shadow .3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+.track-map-img {
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+.track-map-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sector-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 7px;
+  border-radius: 20px;
+  border: 1.5px solid transparent;
+  transition: all .2s;
+  font-family: "Roboto Condensed", sans-serif;
+}
+.sector-pill--active {
+  box-shadow: 0 0 8px var(--c);
+}
+.sector-pill-label {
+  font-weight: 800;
+  font-size: .82em;
+  letter-spacing: .5px;
+  min-width: 20px;
+}
+.sector-pill-time {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .78em;
+  opacity: .75;
+}
+.sector-pill-p1 {
+  font-size: .72em;
+  opacity: .6;
+  margin-left: 2px;
+}
+</style>`
 ```
 
 Rows = drivers (sorted by total delta to best). Columns = sectors S1–S9. Cell = rank in that sector. Orange outline = reference.
