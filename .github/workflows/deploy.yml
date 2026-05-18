@@ -26,19 +26,39 @@ jobs:
           cache: npm
           cache-dependency-path: dashboard/package-lock.json
 
-      - name: Install dependencies
+      # ── Main dashboard ────────────────────────────────────────
+      - name: Install main dashboard deps
         run: npm ci
         working-directory: dashboard
 
-      - name: Build dashboard
+      - name: Build main dashboard
         run: npm run build
         working-directory: dashboard
         env:
           OBSERVABLE_TELEMETRY_DISABLE: "true"
 
+      # ── Polish dashboard (sub-path /polish/) ──────────────────
+      - name: Install polish dashboard deps
+        run: npm ci
+        working-directory: dashboard-polish
+
+      - name: Build polish dashboard
+        run: npm run build
+        working-directory: dashboard-polish
+        env:
+          OBSERVABLE_TELEMETRY_DISABLE: "true"
+
+      # ── Combine into a single artifact ────────────────────────
+      - name: Combine builds
+        run: |
+          mkdir -p combined
+          cp -r dashboard/dist/. combined/
+          mkdir -p combined/polish
+          cp -r dashboard-polish/dist/. combined/polish/
+
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dashboard/dist
+          path: combined
 
   deploy:
     needs: build

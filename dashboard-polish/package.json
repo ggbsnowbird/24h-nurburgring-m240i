@@ -1,0 +1,14 @@
+{
+  "name": "24h-nurburgring-m240i",
+  "version": "1.0.0",
+  "description": "54th ADAC Ravenol 24h Nürburgring 2026 — M240i Racing Cup dashboard",
+  "type": "module",
+  "scripts": {
+    "dev": "observable preview",
+    "build": "observable build",
+    "deploy": "observable deploy"
+  },
+  "dependencies": {
+    "@observablehq/framework": "^1.13.4"
+  }
+}
