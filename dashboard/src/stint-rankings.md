@@ -3,8 +3,9 @@ title: Stint Rankings
 ---
 
 ```js
-const ranking = await FileAttachment("data/ranking.json").json();
-const stints  = await FileAttachment("data/stints.json").json();
+const ranking     = await FileAttachment("data/ranking.json").json();
+const stints      = await FileAttachment("data/stints.json").json();
+const corrections = await FileAttachment("data/corrections.json").json();
 ```
 
 ```js
@@ -26,6 +27,26 @@ function driversOf(car) {
 
 > For each stint, all M240i drivers on track **at the same time** are ranked by best lap.  
 > This enables fair, condition-comparable performance comparison.
+
+```js
+// Correction callout — shown when the selected car/driver has a corrected stint
+const relevantCorrections = corrections.filter(c =>
+  c.car_no === refCar &&
+  (refDriver === "All drivers" || c.original_lap_start !== c.corrected_lap_start)
+);
+```
+
+${corrections.length > 0 ? html`
+<div class="correction-log">
+  <strong>⚠ Correction log</strong>
+  ${corrections.map(c => html`
+    <div class="correction-item">
+      <span class="badge">#${c.car_no} · Stint ${c.stint_no}</span>
+      <span>${c.reason}</span>
+      <span class="meta">Laps ${c.original_lap_start}–${c.original_lap_end} → <strong>${c.corrected_lap_start}–${c.corrected_lap_end}</strong> · Applied ${c.corrected_at.slice(0,10)}</span>
+    </div>
+  `)}
+</div>` : ""}
 
 ---
 
@@ -227,4 +248,24 @@ Inputs.table(stintRows.map(r => ({
   font-size: 0.9em; opacity: 0.85;
 }
 .stint-meta strong { color: #ff9800; }
+
+.correction-log {
+  border-left: 4px solid #f0a500;
+  background: #1e1a0e;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin: 1.2rem 0;
+  font-size: 0.88em;
+}
+.correction-log strong { color: #f0a500; display: block; margin-bottom: 0.5rem; }
+.correction-item {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 0.4rem 0; border-top: 1px solid #333;
+}
+.correction-item .badge {
+  font-weight: 700; color: #ff9800; font-size: 0.9em;
+}
+.correction-item .meta {
+  opacity: 0.55; font-size: 0.85em;
+}
 </style>
