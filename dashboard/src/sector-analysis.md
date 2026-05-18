@@ -3,8 +3,9 @@ title: Sector Analysis
 ---
 
 ```js
-const sectors = await FileAttachment("data/sectors.json").json();
-const stints  = await FileAttachment("data/stints.json").json();
+const sectors    = await FileAttachment("data/sectors.json").json();
+const stints     = await FileAttachment("data/stints.json").json();
+const trackMapUrl = await FileAttachment("assets/track-sectors.png").url();
 ```
 
 ```js
@@ -110,7 +111,72 @@ html`<div class="stint-meta">
 
 ---
 
-## Sector rank heatmap
+## Track map & sector heatmap
+
+```js
+// Colour of each sector segment matching the track map image
+const SECTOR_COLORS = {
+  1: "#22c55e",  // green
+  2: "#16a34a",  // dark green
+  3: "#0d9488",  // teal
+  4: "#06b6d4",  // cyan
+  5: "#3b82f6",  // blue
+  6: "#8b5cf6",  // purple
+  7: "#d946ef",  // pink/magenta
+  8: "#e11d48",  // crimson
+  9: "#ef4444"   // red
+};
+```
+
+```js
+// Track map with selected sector highlighted
+html`<div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;margin-bottom:1rem">
+  <!-- Track map -->
+  <div style="position:relative;flex-shrink:0;width:260px">
+    <img src="${trackMapUrl}" style="width:260px;height:260px;object-fit:contain;border-radius:8px;background:var(--theme-background-alt);padding:8px" alt="NBR sector map">
+    <!-- Sector labels overlay — highlight selected sector with a glowing badge -->
+    <div style="position:absolute;top:8px;left:8px;right:8px;bottom:8px;pointer-events:none">
+      ${sectorNums.map(s => {
+        const isSelected = `S${s}` === sectorSel;
+        const color = SECTOR_COLORS[s] ?? "#888";
+        return html`<div style="
+          display:inline-block;
+          margin:2px;
+          padding:2px 7px;
+          border-radius:12px;
+          font-size:11px;
+          font-weight:700;
+          background:${isSelected ? color : 'rgba(0,0,0,0.45)'};
+          color:${isSelected ? '#fff' : color};
+          border:1.5px solid ${color};
+          box-shadow:${isSelected ? `0 0 8px ${color}` : 'none'};
+          transition:all .2s;
+        ">S${s}</div>`;
+      })}
+    </div>
+  </div>
+  <!-- Quick sector legend -->
+  <div style="flex:1;min-width:160px">
+    <div style="font-size:.78em;opacity:.5;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Sectors</div>
+    ${sectorNums.map(s => {
+      const color = SECTOR_COLORS[s] ?? "#888";
+      const isSelected = `S${s}` === sectorSel;
+      const rows = stintSectors.filter(r => r.sector === s);
+      const best = rows.length ? Math.min(...rows.map(r => r.sector_time_sec)) : null;
+      return html`<div style="
+        display:flex;align-items:center;gap:8px;
+        padding:3px 6px;border-radius:5px;margin-bottom:2px;
+        background:${isSelected ? 'var(--theme-background-alt)' : 'transparent'};
+        border-left:3px solid ${isSelected ? color : 'transparent'};
+      ">
+        <span style="font-weight:700;color:${color};font-size:.85em;min-width:20px">S${s}</span>
+        <span style="font-size:.8em;opacity:.65">${best != null ? (best < 60 ? best.toFixed(2)+'s' : Math.floor(best/60)+':'+(best%60).toFixed(3).padStart(6,'0')) : '—'}</span>
+        <span style="font-size:.72em;opacity:.35">${rows.length ? `${[...new Set(rows.map(r=>r.comp_driver))].length} drivers` : ''}</span>
+      </div>`;
+    })}
+  </div>
+</div>`
+```
 
 Rows = drivers (sorted by total delta to best). Columns = sectors S1–S9. Cell = rank in that sector. Orange outline = reference.
 
