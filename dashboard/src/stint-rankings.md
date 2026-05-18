@@ -44,7 +44,7 @@ corrections.length > 0 ? html`<div class="correction-log">
 </div>` : html``
 ```
 
-<div class="control-bar">
+---
 
 ```js
 const refCar = view(Inputs.select(CARS, {
@@ -61,8 +61,6 @@ const refDriver = view(Inputs.select(["All drivers", ...refDrivers], {
   value: refDrivers.includes("Boutonnet") ? "Boutonnet" : "All drivers"
 }));
 ```
-
-</div>
 
 ```js
 const filteredStints = stints.filter(s =>
@@ -98,14 +96,9 @@ const rankLineWithTime = selfRows.map(r => ({
 })).filter(r => r.stint_start && !isNaN(r.stint_start));
 ```
 
-### Rank evolution — real race time
-
-```js
-html`<div class="chart-subtitle">${refDriver === "All drivers" ? "All stints" : refDriver} — rank by best lap, plotted at each stint start time</div>`
-```
-
 ```js
 Plot.plot({
+  title: `${refDriver === "All drivers" ? "All stints" : refDriver} — rank by best lap (real race time)`,
   width,
   height: 320,
   marginLeft: 48,
@@ -159,8 +152,6 @@ Plot.plot({
 
 ## Stint detail
 
-<div class="control-bar">
-
 ```js
 const selectedStint = view(Inputs.select(
   filteredStints.map(s => s.stint_no),
@@ -173,8 +164,6 @@ const selectedStint = view(Inputs.select(
   }
 ));
 ```
-
-</div>
 
 ```js
 const stintRows = filteredRanking
@@ -197,14 +186,10 @@ html`<div class="stint-meta">
 ```
 
 ```js
-html`<h3 style="margin:1.5rem 0 .25rem">Stint ${selectedStint} ranking</h3>
-<div class="chart-subtitle">${stintRows.length} drivers on track in this window — ranked by best lap (outlap excluded)</div>${stintRows.length === 0 ? html`<div class="empty-state">No data for this selection — try a different stint or driver.</div>` : ''}`
-```
-
-```js
 Plot.plot({
+  title: `Stint ${selectedStint} — ranked by best lap (outlap excluded)`,
   width,
-  height: Math.max(180, stintRows.length * 26 + 70),
+  height: Math.max(180, stintRows.length * 30 + 70),
   marginLeft: 16,
   marginRight: 16,
   style: { background: "transparent", color: "#ccc", fontSize: "12px" },
