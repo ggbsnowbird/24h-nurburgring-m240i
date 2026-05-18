@@ -1,10 +1,7 @@
 dashboard/node_modules/
 dashboard/src/.observablehq/cache/
 dashboard/dist/
-dashboard-polish/node_modules/
-dashboard-polish/src/.observablehq/cache/
-dashboard-polish/dist/
-combined/
+dashboard.before-polish-swap/
 *.db
 *.db-journal
 *.md.bak

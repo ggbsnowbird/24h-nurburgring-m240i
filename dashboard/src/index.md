@@ -35,9 +35,9 @@ html`<div class="hero">
 
 ---
 
-## Pace evolution — all valid laps
+## Pace evolution
 
-> **Scatter** = each valid lap (outlap & laps >11:30 excluded). **P5 rolling min** = 5th-percentile lap in trailing window (no future data). **Rolling avg** = mean in trailing window. **±1σ band** = spread of the field.
+<div class="chart-subtitle">Each valid lap (outlap & laps &gt;11:30 excluded) plotted on real race time · P5 rolling min, rolling avg and ±1σ band computed over a trailing window</div>
 
 ```js
 // Timestamps are already CEST — parse as-is (ISO local, no Z suffix)
@@ -53,6 +53,8 @@ const allDrivers = [...new Map(
 ).values()].sort((a,b) => a.car_no - b.car_no || (a.driver ?? "").localeCompare(b.driver ?? ""));
 ```
 
+<div class="control-bar">
+
 ```js
 const selectedDrivers = view(Inputs.select(allDrivers, {
   multiple: true,
@@ -64,10 +66,18 @@ const selectedDrivers = view(Inputs.select(allDrivers, {
 ```
 
 ```js
-// Select all / Clear buttons
-const driverSelectEl = html`<div style="display:flex;gap:8px;margin-top:4px">
+const windowMin = view(Inputs.range([15, 60], {
+  step: 15,
+  value: 30,
+  label: "Rolling window (min)"
+}));
+```
+
+</div>
+
+```js
+html`<div style="display:flex;gap:8px;margin:-.5rem 0 .5rem">
   <button onclick=${() => {
-    // Re-set to all — triggers reactivity via the view
     const sel = document.querySelector('select[name="selectedDrivers"], select');
     if (sel) { [...sel.options].forEach(o => o.selected = true); sel.dispatchEvent(new Event('input')); }
   }} style="font-size:11px;padding:2px 10px;cursor:pointer;background:#1e1e1e;color:#ccc;border:1px solid #444;border-radius:4px">Select all</button>
@@ -76,16 +86,7 @@ const driverSelectEl = html`<div style="display:flex;gap:8px;margin-top:4px">
     if (sel) { [...sel.options].forEach(o => o.selected = false); sel.dispatchEvent(new Event('input')); }
   }} style="font-size:11px;padding:2px 10px;cursor:pointer;background:#1e1e1e;color:#ccc;border:1px solid #444;border-radius:4px">Clear</button>
   <span style="font-size:11px;opacity:.45;align-self:center">${selectedDrivers.length} / ${allDrivers.length} drivers shown · Cmd/Ctrl+click to multi-select</span>
-</div>`;
-driverSelectEl
-```
-
-```js
-const windowMin = view(Inputs.range([15, 60], {
-  step: 15,
-  value: 30,
-  label: "Rolling window (min)"
-}));
+</div>`
 ```
 
 ```js
