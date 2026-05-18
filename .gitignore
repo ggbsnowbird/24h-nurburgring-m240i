@@ -1,0 +1,8 @@
+dashboard/node_modules/
+dashboard/src/.observablehq/cache/
+dashboard/dist/
+*.db
+*.db-journal
+Data Source/
+__pycache__/
+.DS_Store
