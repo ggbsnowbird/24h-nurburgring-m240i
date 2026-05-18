@@ -13,17 +13,25 @@ const CAR_COLORS = {
   653: "#9c27b0", 658: "#00bcd4", 665: "#f44336", 667: "#8bc34a",
   669: "#ff5722", 670: "#3f51b5", 677: "#ffc107"
 };
-const CARS = [...new Set(sectors.map(d => d.ref_car_no))].sort((a,b)=>a-b);
+
+const CARS = [...new Set(stints.map(d => d.car_no))].sort((a,b)=>a-b);
+
 function driversOf(car) {
   return [...new Set(stints.filter(s=>s.car_no===car).map(s=>s.driver_name).filter(Boolean))].sort();
+}
+
+function fmtSec(s) {
+  if (s == null) return "—";
+  return s < 60 ? `${s.toFixed(3)}s` : `${Math.floor(s/60)}:${String((s%60).toFixed(3)).padStart(6,'0')}`;
 }
 ```
 
 # Sector Analysis
 
 <div class="info-box">
-  Best sector time per driver per stint window — outlap excluded, laps &gt;11:30 filtered.<br>
-  Heatmap: <span style="color:#4caf50">■</span> fastest · <span style="color:#e63946">■</span> slowest. Reference driver outlined in orange.
+  For each stint, all drivers on track in the same time window are ranked by best sector time.<br>
+  <strong>Window:</strong> 4 min before ref stint start → ref stint end. Outlap excluded. Laps &gt;11:30 filtered.<br>
+  Reference driver/car highlighted in orange.
 </div>
 
 ---
@@ -46,8 +54,7 @@ const refDriver = view(Inputs.select(["All drivers", ...driversOf(refCar)], {
 ```js
 const filteredStints = stints.filter(s =>
   s.car_no === refCar &&
-  (refDriver === "All drivers" || s.driver_name === refDriver) &&
-  s.best_laptime_sec < 690
+  (refDriver === "All drivers" || s.driver_name === refDriver)
 );
 ```
 
@@ -58,95 +65,113 @@ const selectedStint = view(Inputs.select(
     label: "Stint",
     format: n => {
       const s = filteredStints.find(x => x.stint_no === n);
-      return `Stint ${n} · ${s?.driver_name} · ${s?.day_time_start?.slice(11,16)}→${s?.day_time_end?.slice(11,16)} UTC`;
+      return `Stint ${n} · ${s?.driver_name} · L${s?.lap_start}–${s?.lap_end} · ${s?.day_time_start?.slice(11,16)}→${s?.day_time_end?.slice(11,16)} UTC`;
     }
   }
 ));
 ```
 
 ```js
+const refStint = filteredStints.find(s => s.stint_no === selectedStint);
+
+// All sector data for this stint
 const stintSectors = sectors.filter(r =>
   r.ref_car_no === refCar && r.ref_stint_no === selectedStint
 );
-const sectorNums = [1,2,3,4,5,6,7,8,9];
 
-const driverKeys = [...new Set(stintSectors.map(d => `${d.comp_driver}|${d.comp_car_no}`))];
+const sectorNums = [...new Set(stintSectors.map(d => d.sector))].sort((a,b)=>a-b);
+const nSectors = sectorNums.length;
 
-// Pivot + sort by total rank sum
-const pivotData = driverKeys.map(key => {
-  const [driver, carStr] = key.split('|');
+// All unique drivers in this window, sorted by average rank across sectors
+const driverKeys = [...new Set(stintSectors.map(d => `${d.comp_driver}||${d.comp_car_no}`))];
+
+const driverSummary = driverKeys.map(key => {
+  const [driver, carStr] = key.split('||');
   const car = +carStr;
-  const row = { driver, car, label: `${driver} #${car}`, is_ref: car === refCar };
-  let rankSum = 0, rankCount = 0;
-  for (const s of sectorNums) {
-    const e = stintSectors.find(r => r.comp_driver === driver && r.comp_car_no === car && r.sector === s);
-    row[`s${s}_rank`] = e?.rank ?? null;
-    row[`s${s}_time`] = e?.sector_time_sec ?? null;
-    if (e) { rankSum += e.rank; rankCount++; }
-  }
-  row.avg_rank = rankCount ? rankSum / rankCount : 99;
-  return row;
-}).sort((a,b) => a.avg_rank - b.avg_rank);
+  const rows = stintSectors.filter(r => r.comp_driver === driver && r.comp_car_no === car);
+  const avgRank = rows.length ? d3.mean(rows, r => r.rank) : 99;
+  const sumDelta = d3.sum(rows, r => r.delta_to_best);
+  return { driver, car, label: `#${car} ${driver}`, avgRank, sumDelta, is_ref: car === refCar && (refDriver === "All drivers" || driver === refDriver) };
+}).sort((a,b) => a.sumDelta - b.sumDelta);
 
-const driverOrder = pivotData.map(r => r.label);
+const driverOrder = driverSummary.map(d => d.label);
 const maxRank = d3.max(stintSectors, d => d.rank) ?? 10;
 ```
 
+<div class="stint-meta">
+  <span>🏎 #${refStint?.car_no} ${refStint?.car_drivers}</span>
+  <span>Driver on ref: <strong>${refStint?.driver_name}</strong></span>
+  <span>Laps ${refStint?.lap_start}–${refStint?.lap_end}</span>
+  <span>${refStint?.day_time_start?.slice(11,16)}→${refStint?.day_time_end?.slice(11,16)} UTC</span>
+  <span style="opacity:.5">${driverOrder.length} drivers · ${nSectors} sectors</span>
+</div>
+
 ---
 
-## Sector rank heatmap — Stint ${selectedStint}
+## Sector rank heatmap
+
+> Rows = drivers (sorted by total delta to best). Columns = sectors S1→S${nSectors}. Cell = rank in that sector. Orange outline = reference.
 
 ```js
-const heatData = [];
-for (const row of pivotData) {
-  for (const s of sectorNums) {
-    if (row[`s${s}_rank`] !== null) {
-      heatData.push({
-        label: row.label,
-        car: row.car,
-        sector: `S${s}`,
-        rank: row[`s${s}_rank`],
-        time: row[`s${s}_time`],
-        is_ref: row.is_ref
-      });
-    }
-  }
-}
+const heatData = stintSectors.map(r => ({
+  label: `#${r.comp_car_no} ${r.comp_driver}`,
+  sector: `S${r.sector}`,
+  rank: r.rank,
+  time: r.sector_time_sec,
+  delta: r.delta_to_best,
+  n: r.n_drivers,
+  is_ref: r.comp_car_no === refCar && (refDriver === "All drivers" || r.comp_driver === refDriver)
+}));
 ```
 
 ```js
 Plot.plot({
-  title: "Sector rank per driver (rows sorted by average rank)",
   width,
-  height: Math.max(180, driverOrder.length * 36 + 80),
-  marginLeft: 168,
+  height: Math.max(160, driverOrder.length * 38 + 70),
+  marginLeft: 148,
   marginBottom: 36,
   style: { background: "transparent", color: "#ccc", fontSize: "12px" },
-  x: { label: "Sector →", domain: sectorNums.map(s=>`S${s}`) },
-  y: { label: null, domain: driverOrder },
+  x: {
+    label: "Sector →",
+    domain: sectorNums.map(s => `S${s}`)
+  },
+  y: {
+    label: null,
+    domain: driverOrder
+  },
   color: {
     domain: [1, maxRank],
-    range: ["#1b5e20","#4caf50","#cddc39","#ff9800","#e63946"],
-    legend: true, label: "Rank"
+    range: ["#1b5e20", "#4caf50", "#cddc39", "#ff9800", "#e63946"],
+    legend: true,
+    label: "Rank"
   },
   marks: [
     Plot.cell(heatData, {
-      x: "sector", y: "label", fill: "rank",
-      inset: 2, rx: 4,
+      x: "sector",
+      y: "label",
+      fill: "rank",
+      inset: 2,
+      rx: 4,
       tip: true,
-      title: d => `${d.label}\n${d.sector}: P${d.rank}\nTime: ${d.time?.toFixed(3)}s`
+      title: d => `${d.label}\n${d.sector}: P${d.rank}/${d.n}\nTime: ${fmtSec(d.time)}\n+${d.delta.toFixed(3)}s vs best`
     }),
     Plot.text(heatData, {
-      x: "sector", y: "label",
+      x: "sector",
+      y: "label",
       text: d => `${d.rank}`,
       fontSize: 11,
       fontWeight: d => d.is_ref ? "bold" : "normal",
-      fill: d => d.rank <= Math.ceil(maxRank/3) ? "#fff" : "#111"
+      fill: d => (d.rank / maxRank) < 0.4 ? "#fff" : "#111"
     }),
+    // Orange border for reference driver
     Plot.cell(heatData.filter(d => d.is_ref), {
-      x: "sector", y: "label",
-      stroke: "#ff9800", strokeWidth: 2.5,
-      fill: "none", inset: 2, rx: 4
+      x: "sector",
+      y: "label",
+      stroke: "#ff9800",
+      strokeWidth: 2.5,
+      fill: "none",
+      inset: 2,
+      rx: 4
     })
   ]
 })
@@ -154,7 +179,7 @@ Plot.plot({
 
 ---
 
-## Sector times — select a sector
+## Ranking by sector — select one sector
 
 ```js
 const sectorSel = view(Inputs.select(
@@ -167,41 +192,60 @@ const sectorSel = view(Inputs.select(
 const sNum = +sectorSel.slice(1);
 const sectorBarData = stintSectors
   .filter(r => r.sector === sNum)
-  .map(r => ({ ...r, label: `${r.comp_driver} #${r.comp_car_no}`, is_ref: r.comp_car_no === refCar }))
+  .map(r => ({
+    ...r,
+    label: `#${r.comp_car_no} ${r.comp_driver}`,
+    is_ref: r.comp_car_no === refCar && (refDriver === "All drivers" || r.comp_driver === refDriver)
+  }))
   .sort((a,b) => a.sector_time_sec - b.sector_time_sec);
 
 const sBest  = sectorBarData[0]?.sector_time_sec ?? 1;
-const sWorst = d3.quantile(sectorBarData.map(d=>d.sector_time_sec).sort(d3.ascending), 0.9) ?? sBest * 1.1;
+const sMax   = d3.max(sectorBarData, d => d.sector_time_sec) ?? sBest * 1.1;
+const xPad   = (sMax - sBest) * 0.04;
 ```
 
 ```js
 Plot.plot({
-  title: `${sectorSel} times — Stint ${selectedStint}`,
+  title: `${sectorSel} ranking — Stint ${selectedStint} · ${refStint?.driver_name}`,
   width,
-  height: Math.max(160, sectorBarData.length * 30 + 70),
-  marginLeft: 168,
-  marginRight: 120,
+  height: Math.max(140, sectorBarData.length * 32 + 60),
+  marginLeft: 148,
+  marginRight: 180,
   style: { background: "transparent", color: "#ccc", fontSize: "12px" },
   x: {
-    label: "Sector time (s) →",
-    domain: [sBest * 0.99, sWorst * 1.01],
-    tickFormat: s => `${s.toFixed(1)}s`
+    label: "Sector time →",
+    domain: [sBest - xPad, sMax + xPad * 2],
+    tickFormat: s => `${s.toFixed(2)}s`
   },
-  y: { label: null, domain: sectorBarData.map(r => r.label) },
+  y: {
+    label: null,
+    domain: sectorBarData.map(r => r.label)
+  },
   marks: [
     Plot.barX(sectorBarData, {
-      x: "sector_time_sec", y: "label",
-      fill: d => d.is_ref ? "#ff9800" : (CAR_COLORS[d.comp_car_no] ?? "#555"),
-      opacity: 0.85, inset: 2, rx: 3,
-      tip: true,
-      title: d => `P${d.rank} · #${d.comp_car_no} ${d.comp_driver}\n${d.sector_time_sec}s (+${(d.sector_time_sec-sBest).toFixed(3)}s vs best)`
-    }),
-    Plot.ruleX([sBest], { stroke: "#4caf50", strokeWidth: 1.5, strokeDasharray: "4,3" }),
-    Plot.text(sectorBarData, {
-      x: d => d.sector_time_sec + (sWorst - sBest) * 0.01,
+      x: "sector_time_sec",
       y: "label",
-      text: d => `P${d.rank}  ${d.sector_time_sec}s  +${(d.sector_time_sec-sBest).toFixed(3)}s`,
-      textAnchor: "start", fontSize: 10, fill: "#bbb"
+      fill: d => d.is_ref ? "#ff9800" : (CAR_COLORS[d.comp_car_no] ?? "#555"),
+      opacity: d => d.is_ref ? 1 : 0.75,
+      inset: 2,
+      rx: 3,
+      tip: true,
+      title: d => `P${d.rank}/${d.n_drivers} · #${d.comp_car_no} ${d.comp_driver}\n${fmtSec(d.sector_time_sec)}\n+${d.delta_to_best.toFixed(3)}s vs best`
+    }),
+    // Best time marker
+    Plot.ruleX([sBest], {
+      stroke: "#4caf50",
+      strokeWidth: 1.5,
+      strokeDasharray: "4,3"
+    }),
+    // Labels: rank + time + delta
+    Plot.text(sectorBarData, {
+      x: d => d.sector_time_sec + xPad * 0.5,
+      y: "label",
+      text: d => `P${d.rank}  ${fmtSec(d.sector_time_sec)}  +${d.delta_to_best.toFixed(3)}s`,
+      textAnchor: "start",
+      fontSize: 10,
+      fill: "#bbb"
     })
   ]
 })
@@ -209,37 +253,37 @@ Plot.plot({
 
 ---
 
-## Delta to best per sector
+## Delta to best — all sectors at once
+
+> Each line = one driver. Orange = reference. Shows where time is lost/gained across all sectors.
 
 ```js
-const deltaData = [];
-for (const s of sectorNums) {
-  const rows = stintSectors.filter(r => r.sector === s).sort((a,b)=>a.sector_time_sec-b.sector_time_sec);
-  if (!rows.length) continue;
-  const best = rows[0].sector_time_sec;
-  for (const r of rows) {
-    deltaData.push({
-      label: `${r.comp_driver} #${r.comp_car_no}`,
-      sector: `S${s}`,
-      delta: +(r.sector_time_sec - best).toFixed(3),
-      is_ref: r.comp_car_no === refCar,
-      car: r.comp_car_no
-    });
-  }
-}
-const maxDelta = d3.quantile(deltaData.map(d=>d.delta).sort(d3.ascending), 0.85) ?? 20;
+const deltaData = stintSectors.map(r => ({
+  label: `#${r.comp_car_no} ${r.comp_driver}`,
+  sector: `S${r.sector}`,
+  delta: r.delta_to_best,
+  is_ref: r.comp_car_no === refCar && (refDriver === "All drivers" || r.comp_driver === refDriver),
+  car: r.comp_car_no
+}));
+
 const refDeltaData = deltaData.filter(d => d.is_ref);
+const maxDelta = d3.quantile(
+  deltaData.map(d => d.delta).sort(d3.ascending), 0.85
+) ?? 10;
 ```
 
 ```js
 Plot.plot({
-  title: `Delta to best per sector — Stint ${selectedStint} (ref: ${refDriver === "All drivers" ? `#${refCar}` : refDriver} in orange)`,
+  title: `Delta to best per sector — orange = ${refDriver === "All drivers" ? `#${refCar}` : refDriver}`,
   width,
-  height: 300,
+  height: 280,
   marginLeft: 48,
   marginRight: 16,
   style: { background: "transparent", color: "#ccc", fontSize: "12px" },
-  x: { label: "Sector →", domain: sectorNums.map(s=>`S${s}`) },
+  x: {
+    label: "Sector →",
+    domain: sectorNums.map(s => `S${s}`)
+  },
   y: {
     label: "← Delta to best (s)",
     domain: [0, maxDelta * 1.1],
@@ -248,21 +292,74 @@ Plot.plot({
   marks: [
     Plot.gridY({ stroke: "#2a2a2a" }),
     Plot.ruleY([0], { stroke: "#4caf50", strokeWidth: 1.5 }),
+    // All other drivers (thin, muted)
     Plot.line(deltaData.filter(d => !d.is_ref), {
-      x: "sector", y: "delta", z: "label",
+      x: "sector",
+      y: "delta",
+      z: "label",
       stroke: d => CAR_COLORS[d.car] ?? "#555",
-      strokeWidth: 1, opacity: 0.35, curve: "linear"
+      strokeWidth: 1,
+      opacity: 0.3,
+      curve: "linear"
     }),
+    // Reference driver (bold orange)
     Plot.line(refDeltaData, {
-      x: "sector", y: "delta",
-      stroke: "#ff9800", strokeWidth: 3, curve: "linear"
+      x: "sector",
+      y: "delta",
+      stroke: "#ff9800",
+      strokeWidth: 3,
+      curve: "linear"
     }),
     Plot.dot(refDeltaData, {
-      x: "sector", y: "delta",
-      fill: "#ff9800", r: 5, tip: true,
-      title: d => `${d.label}\n${d.sector}: +${d.delta}s vs best`
+      x: "sector",
+      y: "delta",
+      fill: "#ff9800",
+      r: 5,
+      tip: true,
+      title: d => `${d.label}\n${d.sector}: +${d.delta.toFixed(3)}s vs best`
+    }),
+    // Labels on ref dots
+    Plot.text(refDeltaData, {
+      x: "sector",
+      y: "delta",
+      text: d => `+${d.delta.toFixed(2)}`,
+      dy: -12,
+      fontSize: 9,
+      fill: "#ff9800"
     })
   ]
+})
+```
+
+---
+
+## Full sector table
+
+```js
+// Pivot: one row per driver, one col per sector
+const tableRows = driverSummary.map(d => {
+  const row = {
+    "Driver": d.label,
+    "Avg rank": d.avgRank.toFixed(1),
+    "Σ delta": `+${d.sumDelta.toFixed(2)}s`
+  };
+  for (const s of sectorNums) {
+    const e = stintSectors.find(r =>
+      r.comp_driver === d.driver && r.comp_car_no === d.car && r.sector === s
+    );
+    row[`S${s}`] = e ? `P${e.rank} (${e.sector_time_sec.toFixed(2)}s)` : "—";
+  }
+  return row;
+});
+```
+
+```js
+Inputs.table(tableRows, {
+  sort: "Avg rank",
+  width: Object.fromEntries([
+    ["Driver", 140], ["Avg rank", 72], ["Σ delta", 72],
+    ...sectorNums.map(s => [`S${s}`, 110])
+  ])
 })
 ```
 
@@ -270,6 +367,13 @@ Plot.plot({
 .info-box {
   background: #161e1e; border-left: 3px solid #00bcd4;
   border-radius: 6px; padding: .6rem 1rem; margin: 1rem 0;
-  font-size: .85em; line-height: 1.6; opacity: .85;
+  font-size: .85em; line-height: 1.7; opacity: .9;
 }
+.stint-meta {
+  display: flex; gap: 1.2rem; flex-wrap: wrap;
+  background: #1a1a2e; border-radius: 8px;
+  padding: .65rem 1rem; margin: .8rem 0;
+  font-size: .88em;
+}
+.stint-meta strong { color: #ff9800; }
 </style>

@@ -169,8 +169,8 @@ Plot.plot({
   title: `Stint ${selectedStint} — ranked by best lap (outlap excluded)`,
   width,
   height: Math.max(180, stintRows.length * 30 + 70),
-  marginLeft: 168,
-  marginRight: 110,
+  marginLeft: 16,
+  marginRight: 16,
   style: { background: "transparent", color: "#ccc", fontSize: "12px" },
   x: {
     label: "Best lap (s) →",
@@ -179,6 +179,7 @@ Plot.plot({
   },
   y: {
     label: null,
+    axis: null,
     domain: stintRows.map(r => `${r.comp_driver} #${r.comp_car_no}`)
   },
   color: {
@@ -196,13 +197,27 @@ Plot.plot({
       tip: true,
       title: d => `P${d.rank_by_best} · #${d.comp_car_no} ${d.comp_driver}\nBest: ${fmtSec(d.best_laptime_sec)}\nAvg: ${fmtSec(d.avg_laptime_sec)}\nLaps: ${d.laps_in_window}`
     }),
+    // Label inside bar: rank
     Plot.text(stintRows, {
-      x: d => d.best_laptime_sec + (xDomainMax - xDomainMin) * 0.01,
+      x: d => xDomainMin + (xDomainMax - xDomainMin) * 0.01,
       y: d => `${d.comp_driver} #${d.comp_car_no}`,
-      text: d => `P${d.rank_by_best}  ${fmtSec(d.best_laptime_sec)}`,
+      text: d => `P${d.rank_by_best}`,
       textAnchor: "start",
       fontSize: 10,
-      fill: "#ccc"
+      fontWeight: "bold",
+      fill: d => d.rank_by_best <= 3 ? "#fff" : "#eee"
+    }),
+    // Label outside bar: car# driver + time + gap
+    Plot.text(stintRows, {
+      x: d => d.best_laptime_sec + (xDomainMax - xDomainMin) * 0.012,
+      y: d => `${d.comp_driver} #${d.comp_car_no}`,
+      text: d => {
+        const gap = d.best_laptime_sec - xDomainMin;
+        return `#${d.comp_car_no} ${d.comp_driver}  ${fmtSec(d.best_laptime_sec)}  +${gap.toFixed(1)}s`;
+      },
+      textAnchor: "start",
+      fontSize: 10,
+      fill: "#bbb"
     }),
     Plot.ruleX(stintRows.filter(r => r.comp_car_no === refCar), {
       x: d => d.best_laptime_sec,
