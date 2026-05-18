@@ -3,8 +3,10 @@ title: Overview
 ---
 
 ```js
-const stints = await FileAttachment("data/stints.json").json();
-const logoUrl = await FileAttachment("assets/logo-main.png").url();
+const stints   = await FileAttachment("data/stints.json").json();
+const allLaps  = await FileAttachment("data/all_laps.json").json();
+const logoUrl  = await FileAttachment("assets/logo-main.png").url();
+const bannerUrl = await FileAttachment("assets/banner.jpg").url();
 ```
 
 ```js
@@ -19,66 +21,202 @@ const totalLaps = stints.reduce((s,d) => s + d.lap_count, 0);
 ```
 
 ```js
-html`<div class="hero">
-  <img src="${logoUrl}" style="height:64px;width:auto;margin-bottom:12px;display:block" alt="54th ADAC Ravenol 24h Nürburgring 2026">
-  <h1>54th ADAC Ravenol 24h Nürburgring</h1>
-  <h2>BMW M240i Racing Cup · May 14–17, 2026</h2>
-  <div class="hero-stats">
-    <div class="hero-stat"><span>${CARS.length}</span>cars</div>
-    <div class="hero-stat"><span>${stints.length}</span>clean stints</div>
-    <div class="hero-stat"><span>${totalLaps}</span>valid laps</div>
-    <div class="hero-stat"><span style="font-size:.75em">outlaps &amp; laps&nbsp;&gt;11:30 excluded</span></div>
+// ── Banner ──────────────────────────────────────────────────────
+html`<div class="nbr-banner" style="
+  position: relative;
+  width: 100%;
+  height: 180px;
+  overflow: hidden;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+">
+  <img src="${bannerUrl}" style="
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: center 40%;
+  " alt="54th ADAC Ravenol 24h Nürburgring 2026">
+
+  <!-- Dark gradient overlay: left strong, right transparent -->
+  <div style="
+    position: absolute; inset: 0;
+    background: linear-gradient(to right, rgba(0,0,0,.82) 0%, rgba(0,0,0,.55) 45%, rgba(0,0,0,.1) 100%);
+  "></div>
+
+  <!-- Bottom fade for blending -->
+  <div style="
+    position: absolute; bottom: 0; left: 0; right: 0; height: 60px;
+    background: linear-gradient(to bottom, transparent, rgba(0,0,0,.5));
+  "></div>
+
+  <!-- Content overlay -->
+  <div style="
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 0 2rem;
+    gap: 6px;
+  ">
+    <img src="${logoUrl}" style="height:52px;width:auto;margin-bottom:2px" alt="ADAC Ravenol 24h NBR">
+    <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-top:4px">
+      <div class="banner-stat"><span>${CARS.length}</span>Cars</div>
+      <div class="banner-stat"><span>${stints.length}</span>Stints</div>
+      <div class="banner-stat"><span>${totalLaps}</span>Valid laps</div>
+    </div>
   </div>
 </div>`
 ```
 
 ---
 
-## Pace map — best lap per stint over race time
+## Pace evolution — all valid laps
+
+> **Scatter** = each valid lap (outlap & laps >11:30 excluded). **Rolling min** = fastest lap completed in each 60-min sliding window. **Rolling avg** = mean in the same window. **±1σ band** = spread of the field.
 
 ```js
-const stintData = stints.map(d => ({
-  ...d,
-  day_start: new Date(d.day_time_start.replace(' ','T') + 'Z')
-})).filter(d => d.best_laptime_sec > 400 && d.best_laptime_sec < 690);
+// Convert all laps to Date objects and sort by time
+const lapsWithDate = allLaps
+  .map(d => ({ ...d, t: new Date(d.day_time.replace(' ','T') + 'Z') }))
+  .sort((a,b) => a.t - b.t);
 
-const yMin = Math.floor(d3.min(stintData, d => d.best_laptime_sec) / 10) * 10;
-const yMax = Math.ceil(d3.max(stintData, d => d.best_laptime_sec) / 10) * 10;
+// Rolling window stats: for each lap, compute min/avg/sigma
+// over all laps in [-30min, +30min] window (60-min window centered)
+const WINDOW_MS = 30 * 60 * 1000; // ±30 min
+
+const rollingStats = lapsWithDate.map((lap, i) => {
+  const t = lap.t.getTime();
+  const window = lapsWithDate.filter(l => {
+    const dt = Math.abs(l.t.getTime() - t);
+    return dt <= WINDOW_MS;
+  });
+  const times = window.map(l => l.lap_sec);
+  const n = times.length;
+  const min = Math.min(...times);
+  const avg = times.reduce((s,x) => s+x, 0) / n;
+  const sigma = Math.sqrt(times.reduce((s,x) => s + (x-avg)**2, 0) / n);
+  return { t: lap.t, min, avg, sigma, n };
+});
+
+// Downsample rolling stats to one point per 15 min for smooth lines
+const step = 15 * 60 * 1000;
+const tMin = lapsWithDate[0].t.getTime();
+const tMax = lapsWithDate[lapsWithDate.length-1].t.getTime();
+const rollingLine = [];
+for (let t = tMin; t <= tMax; t += step) {
+  const window = lapsWithDate.filter(l => Math.abs(l.t.getTime() - t) <= WINDOW_MS);
+  if (window.length < 3) continue;
+  const times = window.map(l => l.lap_sec);
+  const n = times.length;
+  const min = Math.min(...times);
+  const avg = times.reduce((s,x) => s+x, 0) / n;
+  const sigma = Math.sqrt(times.reduce((s,x) => s + (x-avg)**2, 0) / n);
+  rollingLine.push({ t: new Date(t), min, avg, sigma, lo: avg - sigma, hi: avg + sigma });
+}
+
+const yMin = Math.floor(d3.min(lapsWithDate, d => d.lap_sec) / 10) * 10;
+const yMax = 700; // 11:40 cap
+
+function fmtSec(s) {
+  return `${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`;
+}
+function fmtTime(d) {
+  const h = (d.getUTCHours() + 2) % 24;
+  return `${String(h).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`;
+}
 ```
 
 ```js
 Plot.plot({
   width,
-  height: 400,
+  height: 460,
   marginLeft: 68,
-  marginRight: 12,
+  marginRight: 16,
   style: { background: "transparent", color: "#ccc", fontSize: "12px" },
   x: {
     label: "Race time (CEST) →",
     type: "time",
-    tickFormat: d => {
-      const h = d.getUTCHours() + 2;
-      return `${(h%24).toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')}`;
-    }
+    tickFormat: fmtTime
   },
   y: {
-    label: "↑ Best lap",
+    label: "↑ Lap time",
     domain: [yMin, yMax],
-    tickFormat: s => `${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`
+    tickFormat: fmtSec
   },
   marks: [
-    Plot.gridY({ stroke: "#2a2a2a" }),
-    Plot.dot(stintData, {
-      x: "day_start",
-      y: "best_laptime_sec",
-      fill: d => CAR_COLORS[d.car_no] ?? "#888",
-      r: d => Math.max(3, Math.sqrt(d.lap_count) * 2.2),
-      opacity: 0.85,
+    // Night band (approx 22:00 → 06:00 CEST = 20:00 → 04:00 UTC)
+    Plot.rectX([1], {
+      x1: new Date("2026-05-16T20:00:00Z"),
+      x2: new Date("2026-05-17T04:00:00Z"),
+      fill: "#ffffff", fillOpacity: 0.03
+    }),
+
+    Plot.gridY({ stroke: "#1e1e1e" }),
+
+    // ±1σ band (field spread)
+    Plot.areaY(rollingLine, {
+      x: "t",
+      y1: "lo",
+      y2: "hi",
+      fill: "#ffffff",
+      fillOpacity: 0.06,
+      curve: "monotone-x"
+    }),
+
+    // All individual laps — scatter
+    Plot.dot(lapsWithDate, {
+      x: "t",
+      y: "lap_sec",
+      fill: d => CAR_COLORS[d.car_no] ?? "#666",
+      r: 2.5,
+      opacity: 0.45,
       tip: true,
-      title: d => `#${d.car_no} ${d.driver_name}\nBest: ${d.best_laptime}\nAvg: ${Math.floor(d.avg_laptime_sec/60)}:${String(Math.round(d.avg_laptime_sec%60)).padStart(2,'0')}\nLaps: ${d.lap_count}\n${d.day_time_start.slice(11,16)} UTC`
+      title: d => `#${d.car_no} ${d.driver}\nLap ${d.lap_no}: ${d.lap_time}\n${fmtTime(d.t)} CEST`
+    }),
+
+    // Rolling average line
+    Plot.line(rollingLine, {
+      x: "t",
+      y: "avg",
+      stroke: "#90caf9",
+      strokeWidth: 2,
+      curve: "monotone-x",
+      opacity: 0.9
+    }),
+
+    // Rolling minimum line
+    Plot.line(rollingLine, {
+      x: "t",
+      y: "min",
+      stroke: "#4caf50",
+      strokeWidth: 2.5,
+      curve: "monotone-x",
+      opacity: 0.95
+    }),
+
+    // Legend annotations (right side of chart)
+    Plot.text([
+      { t: new Date(tMax), y: rollingLine[rollingLine.length-1]?.min, label: "Rolling min" },
+      { t: new Date(tMax), y: rollingLine[rollingLine.length-1]?.avg, label: "Rolling avg" },
+    ], {
+      x: "t", y: "y",
+      text: "label",
+      textAnchor: "end",
+      dx: -6,
+      fontSize: 10,
+      fill: d => d.label.includes("min") ? "#4caf50" : "#90caf9"
     })
   ]
 })
+```
+
+```js
+// Legend
+html`<div style="display:flex;gap:1.5rem;font-size:.82em;opacity:.7;margin-top:.5rem;flex-wrap:wrap">
+  <span><span style="display:inline-block;width:20px;height:3px;background:#4caf50;vertical-align:middle;margin-right:4px;border-radius:2px"></span>Rolling min (60-min window)</span>
+  <span><span style="display:inline-block;width:20px;height:3px;background:#90caf9;vertical-align:middle;margin-right:4px;border-radius:2px"></span>Rolling avg</span>
+  <span><span style="display:inline-block;width:20px;height:8px;background:rgba(255,255,255,.1);vertical-align:middle;margin-right:4px;border-radius:2px"></span>±1σ spread</span>
+  <span><span style="display:inline-block;width:8px;height:8px;background:#888;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Individual lap (colour = car)</span>
+  <span style="opacity:.5">Night zone shaded · Outlaps excluded</span>
+</div>`
 ```
 
 ---
@@ -90,9 +228,7 @@ const summary = CARS.map(car => {
   const cs = stints.filter(s => s.car_no === car);
   const best = cs.reduce((b, s) => (!b || s.best_laptime_sec < b.best_laptime_sec) ? s : b, null);
   return {
-    car_no: car,
-    drivers: carDrivers[car],
-    stints: cs.length,
+    car_no: car, drivers: carDrivers[car], stints: cs.length,
     total_laps: cs.reduce((s, d) => s + d.lap_count, 0),
     best_lap: best?.best_laptime ?? "—",
     best_lap_sec: best?.best_laptime_sec,
@@ -116,10 +252,6 @@ html`<div class="grid grid-cols-3">${summary.map((c,i) =>
 ```
 
 <style>
-.hero { padding: 1.5rem 0 1rem; }
-.hero h1 { font-size: 1.9em; font-weight: 800; margin: 0 0 4px; }
-.hero h2 { font-size: 1.05em; opacity: 0.55; margin: 0 0 1rem; font-weight: 400; }
-.hero-stats { display: flex; gap: 2rem; flex-wrap: wrap; }
-.hero-stat span { display: block; font-size: 2em; font-weight: 800; line-height: 1; }
-.hero-stat { font-size: 0.8em; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
+.banner-stat { font-size: 0.72em; color: rgba(255,255,255,.7); text-transform: uppercase; letter-spacing: 1.2px; }
+.banner-stat span { display: block; font-size: 2.2em; font-weight: 800; line-height: 1; color: #fff; }
 </style>
