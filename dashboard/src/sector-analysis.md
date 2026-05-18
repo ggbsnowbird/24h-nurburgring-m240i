@@ -146,6 +146,24 @@ Plot.plot({
     label: "Rank"
   },
   marks: [
+    // Grey "no data" cells for missing sectors
+    Plot.cell(
+      d3.cross(driverOrder, sectorNums.map(s=>`S${s}`)).map(([label, sector]) => ({label, sector}))
+        .filter(({label, sector}) => !heatData.find(d => d.label===label && d.sector===sector)),
+      {
+        x: "sector", y: "label",
+        fill: "#1a1a1a", inset: 2, rx: 4
+      }
+    ),
+    Plot.text(
+      d3.cross(driverOrder, sectorNums.map(s=>`S${s}`)).map(([label, sector]) => ({label, sector}))
+        .filter(({label, sector}) => !heatData.find(d => d.label===label && d.sector===sector)),
+      {
+        x: "sector", y: "label",
+        text: () => "n/a",
+        fontSize: 9, fill: "#444"
+      }
+    ),
     Plot.cell(heatData, {
       x: "sector",
       y: "label",
@@ -176,6 +194,10 @@ Plot.plot({
   ]
 })
 ```
+
+<div class="missing-note">
+  <strong>n/a</strong> = sector time not available in PDF source (some laps printed without sector breakdown, or S9 truncated at end of line). Data gap is in the original timing document, not a processing error.
+</div>
 
 ---
 
@@ -347,7 +369,7 @@ const tableRows = driverSummary.map(d => {
     const e = stintSectors.find(r =>
       r.comp_driver === d.driver && r.comp_car_no === d.car && r.sector === s
     );
-    row[`S${s}`] = e ? `P${e.rank} (${e.sector_time_sec.toFixed(2)}s)` : "—";
+    row[`S${s}`] = e ? `P${e.rank} (${e.sector_time_sec.toFixed(2)}s)` : "n/a";
   }
   return row;
 });
@@ -364,6 +386,11 @@ Inputs.table(tableRows, {
 ```
 
 <style>
+.missing-note {
+  font-size: .8em; opacity: .55; margin: .5rem 0 1rem;
+  padding: .3rem .8rem;
+  border-left: 2px solid #444;
+}
 .info-box {
   background: #161e1e; border-left: 3px solid #00bcd4;
   border-radius: 6px; padding: .6rem 1rem; margin: 1rem 0;
