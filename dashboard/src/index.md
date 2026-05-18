@@ -37,7 +37,7 @@ html`<div class="hero">
 
 ## Pace evolution — all valid laps
 
-> **Scatter** = each valid lap (outlap & laps >11:30 excluded). **Rolling min** = fastest lap completed in each 60-min sliding window. **Rolling avg** = mean in the same window. **±1σ band** = spread of the field (always whole field).
+> **Scatter** = each valid lap (outlap & laps >11:30 excluded). **P5 rolling min** = 5th-percentile lap in trailing window (no future data). **Rolling avg** = mean in trailing window. **±1σ band** = spread of the field.
 
 ```js
 // Timestamps are already CEST — parse as-is (ISO local, no Z suffix)
@@ -81,43 +81,53 @@ driverSelectEl
 ```
 
 ```js
+const windowMin = view(Inputs.range([15, 60], {
+  step: 15,
+  value: 30,
+  label: "Rolling window (min)"
+}));
+```
+
+```js
 // Filtered laps for scatter only — rolling stats always use whole field
 const filteredLaps = lapsWithDate.filter(d =>
   selectedDrivers.some(s => s.driver === d.driver && s.car_no === d.car_no)
 );
 
-// Rolling window stats: for each lap, compute min/avg/sigma
-// over all laps in [-30min, +30min] window (60-min window centered)
-const WINDOW_MS = 30 * 60 * 1000; // ±30 min
+// Trailing window: only laps completed in the last N minutes (no future data)
+const windowMs = windowMin * 60 * 1000;
 
-const rollingStats = lapsWithDate.map((lap, i) => {
-  const t = lap.t.getTime();
-  const window = lapsWithDate.filter(l => {
-    const dt = Math.abs(l.t.getTime() - t);
-    return dt <= WINDOW_MS;
-  });
-  const times = window.map(l => l.lap_sec);
-  const n = times.length;
-  const min = Math.min(...times);
-  const avg = times.reduce((s,x) => s+x, 0) / n;
-  const sigma = Math.sqrt(times.reduce((s,x) => s + (x-avg)**2, 0) / n);
-  return { t: lap.t, min, avg, sigma, n };
-});
+// P5 helper: 5th percentile of a sorted array
+function p5(sorted) {
+  return sorted[Math.max(0, Math.floor(sorted.length * 0.05))];
+}
 
-// Downsample rolling stats to one point per 15 min for smooth lines
-const step = 15 * 60 * 1000;
+// Downsample step: finer at smaller windows
+const step = Math.min(windowMin, 15) * 60 * 1000;
 const tMin = lapsWithDate[0].t.getTime();
 const tMax = lapsWithDate[lapsWithDate.length-1].t.getTime();
+
 const rollingLine = [];
 for (let t = tMin; t <= tMax; t += step) {
-  const window = lapsWithDate.filter(l => Math.abs(l.t.getTime() - t) <= WINDOW_MS);
-  if (window.length < 3) continue;
-  const times = window.map(l => l.lap_sec);
-  const n = times.length;
-  const min = Math.min(...times);
-  const avg = times.reduce((s,x) => s+x, 0) / n;
-  const sigma = Math.sqrt(times.reduce((s,x) => s + (x-avg)**2, 0) / n);
-  rollingLine.push({ t: new Date(t), min, avg, sigma, lo: avg - sigma, hi: avg + sigma });
+  // TRAILING: only laps with end time in [t - windowMs, t]
+  const inWindow = lapsWithDate.filter(l =>
+    l.t.getTime() >= t - windowMs && l.t.getTime() <= t
+  );
+  if (inWindow.length === 0) continue;
+  const times = inWindow.map(l => l.lap_sec);
+  const sorted = [...times].sort((a,b) => a - b);
+  const min5 = p5(sorted);
+  const avg = times.reduce((s,x) => s+x, 0) / times.length;
+  const sigma = Math.sqrt(times.reduce((s,x) => s + (x-avg)**2, 0) / times.length);
+  rollingLine.push({
+    t: new Date(t),
+    min: min5,
+    avg,
+    sigma,
+    lo: avg - sigma,
+    hi: avg + sigma,
+    n: times.length
+  });
 }
 
 const yMin = Math.floor(d3.min(lapsWithDate, d => d.lap_sec) / 10) * 10;
@@ -127,7 +137,6 @@ function fmtSec(s) {
   return `${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`;
 }
 function fmtTime(d) {
-  // Timestamps are CEST — use local hours directly
   return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 ```
@@ -202,25 +211,24 @@ Plot.plot({
 
     // Legend annotations (right side of chart)
     Plot.text([
-      { t: new Date(tMax), y: rollingLine[rollingLine.length-1]?.min, label: "Rolling min" },
-      { t: new Date(tMax), y: rollingLine[rollingLine.length-1]?.avg, label: "Rolling avg" },
+      { t: new Date(tMax), y: rollingLine[rollingLine.length-1]?.min, label: `P5 min (${windowMin}m)` },
+      { t: new Date(tMax), y: rollingLine[rollingLine.length-1]?.avg, label: `Avg (${windowMin}m)` },
     ], {
       x: "t", y: "y",
       text: "label",
       textAnchor: "end",
       dx: -6,
       fontSize: 10,
-      fill: d => d.label.includes("min") ? "#4caf50" : "#90caf9"
+      fill: d => d.label.includes("P5") ? "#4caf50" : "#90caf9"
     })
   ]
 })
 ```
 
 ```js
-// Legend
 html`<div style="display:flex;gap:1.5rem;font-size:.82em;opacity:.7;margin-top:.5rem;flex-wrap:wrap">
-  <span><span style="display:inline-block;width:20px;height:3px;background:#4caf50;vertical-align:middle;margin-right:4px;border-radius:2px"></span>Rolling min (60-min window)</span>
-  <span><span style="display:inline-block;width:20px;height:3px;background:#90caf9;vertical-align:middle;margin-right:4px;border-radius:2px"></span>Rolling avg</span>
+  <span><span style="display:inline-block;width:20px;height:3px;background:#4caf50;vertical-align:middle;margin-right:4px;border-radius:2px"></span>P5 rolling min — trailing ${windowMin}min (no future data)</span>
+  <span><span style="display:inline-block;width:20px;height:3px;background:#90caf9;vertical-align:middle;margin-right:4px;border-radius:2px"></span>Rolling avg — trailing ${windowMin}min</span>
   <span><span style="display:inline-block;width:20px;height:8px;background:rgba(255,255,255,.1);vertical-align:middle;margin-right:4px;border-radius:2px"></span>±1σ spread</span>
   <span><span style="display:inline-block;width:8px;height:8px;background:#888;border-radius:50%;vertical-align:middle;margin-right:4px"></span>Individual lap (colour = car)</span>
   <span style="opacity:.5">Night zone shaded · Outlaps excluded</span>
