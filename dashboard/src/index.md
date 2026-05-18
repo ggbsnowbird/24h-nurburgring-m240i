@@ -37,13 +37,52 @@ html`<div class="hero">
 
 ## Pace evolution — all valid laps
 
-> **Scatter** = each valid lap (outlap & laps >11:30 excluded). **Rolling min** = fastest lap completed in each 60-min sliding window. **Rolling avg** = mean in the same window. **±1σ band** = spread of the field.
+> **Scatter** = each valid lap (outlap & laps >11:30 excluded). **Rolling min** = fastest lap completed in each 60-min sliding window. **Rolling avg** = mean in the same window. **±1σ band** = spread of the field (always whole field).
 
 ```js
 // Timestamps are already CEST — parse as-is (ISO local, no Z suffix)
 const lapsWithDate = allLaps
   .map(d => ({ ...d, t: new Date(d.day_time) }))
   .sort((a,b) => a.t - b.t);
+
+// All unique drivers sorted by car number then name
+const allDrivers = [...new Map(
+  allLaps.map(d => [`${d.car_no}||${d.driver}`, { driver: d.driver, car_no: d.car_no, label: `#${d.car_no} ${d.driver}` }])
+).values()].sort((a,b) => a.car_no - b.car_no || a.driver.localeCompare(b.driver));
+```
+
+```js
+const selectedDrivers = view(Inputs.select(allDrivers, {
+  multiple: true,
+  value: allDrivers,
+  format: d => d.label,
+  label: "Filter drivers",
+  size: 8
+}));
+```
+
+```js
+// Select all / Clear buttons
+const driverSelectEl = html`<div style="display:flex;gap:8px;margin-top:4px">
+  <button onclick=${() => {
+    // Re-set to all — triggers reactivity via the view
+    const sel = document.querySelector('select[name="selectedDrivers"], select');
+    if (sel) { [...sel.options].forEach(o => o.selected = true); sel.dispatchEvent(new Event('input')); }
+  }} style="font-size:11px;padding:2px 10px;cursor:pointer;background:#1e1e1e;color:#ccc;border:1px solid #444;border-radius:4px">Select all</button>
+  <button onclick=${() => {
+    const sel = document.querySelector('select[name="selectedDrivers"], select');
+    if (sel) { [...sel.options].forEach(o => o.selected = false); sel.dispatchEvent(new Event('input')); }
+  }} style="font-size:11px;padding:2px 10px;cursor:pointer;background:#1e1e1e;color:#ccc;border:1px solid #444;border-radius:4px">Clear</button>
+  <span style="font-size:11px;opacity:.45;align-self:center">${selectedDrivers.length} / ${allDrivers.length} drivers shown · Cmd/Ctrl+click to multi-select</span>
+</div>`;
+driverSelectEl
+```
+
+```js
+// Filtered laps for scatter only — rolling stats always use whole field
+const filteredLaps = lapsWithDate.filter(d =>
+  selectedDrivers.some(s => s.driver === d.driver && s.car_no === d.car_no)
+);
 
 // Rolling window stats: for each lap, compute min/avg/sigma
 // over all laps in [-30min, +30min] window (60-min window centered)
@@ -128,13 +167,13 @@ Plot.plot({
       curve: "monotone-x"
     }),
 
-    // All individual laps — scatter
-    Plot.dot(lapsWithDate, {
+    // Individual laps — filtered by driver selection
+    Plot.dot(filteredLaps, {
       x: "t",
       y: "lap_sec",
       fill: d => CAR_COLORS[d.car_no] ?? "#666",
       r: 2.5,
-      opacity: 0.45,
+      opacity: 0.55,
       tip: true,
       title: d => `#${d.car_no} ${d.driver}\nLap ${d.lap_no}: ${d.lap_time}\n${fmtTime(d.t)} CEST`
     }),
