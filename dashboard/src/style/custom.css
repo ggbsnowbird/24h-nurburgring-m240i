@@ -1,0 +1,142 @@
+/* ─── Design System — 24h NBR M240i ─────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+:root {
+  --nbr-green:        #43632d;
+  --nbr-green-light:  #5a8438;
+  --nbr-gold:         #f0c040;
+  --nbr-amber:        #ff9800;
+  --nbr-mono:         "JetBrains Mono", "Fira Mono", monospace;
+}
+
+body, .observablehq, h1, h2, h3, h4, select, input, button, table {
+  font-family: "Roboto Condensed", sans-serif !important;
+}
+.observablehq svg text { font-family: "Roboto Condensed", sans-serif !important; }
+
+/* ── Header accent strip ─────────────────────────────── */
+#observablehq-header {
+  border-bottom: 2px solid var(--nbr-green) !important;
+}
+
+/* ── Typography rhythm ───────────────────────────────── */
+.observablehq h1 {
+  font-weight: 800;
+  letter-spacing: .5px;
+  margin: 1.5rem 0 .25rem;
+}
+.observablehq h2 {
+  font-weight: 700;
+  letter-spacing: .3px;
+  margin: 2rem 0 .5rem;
+  padding-bottom: .35rem;
+  border-bottom: 1px solid var(--theme-foreground-faintest);
+}
+.observablehq h3 {
+  font-weight: 700;
+  font-size: 1.1em;
+  margin: 1.5rem 0 .25rem;
+}
+
+/* ── Standard components ─────────────────────────────── */
+.info-box {
+  background: var(--theme-background-alt);
+  border-left: 3px solid var(--nbr-green);
+  border-radius: 6px;
+  padding: .7rem 1rem;
+  margin: 1rem 0;
+  font-size: .87em;
+  line-height: 1.7;
+}
+.info-box strong { color: var(--nbr-green-light); }
+
+.stint-meta {
+  display: flex;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  background: var(--theme-background-alt);
+  border-left: 3px solid var(--nbr-green);
+  border-radius: 6px;
+  padding: .65rem 1rem;
+  margin: .8rem 0 1.2rem;
+  font-size: .88em;
+}
+.stint-meta strong { color: var(--nbr-amber); }
+
+.muted-note,
+.missing-note {
+  font-size: .8em;
+  opacity: .5;
+  margin: .5rem 0 1rem;
+  padding: .3rem .8rem;
+  border-left: 2px solid var(--theme-foreground-faint);
+}
+
+.empty-state {
+  background: var(--theme-background-alt);
+  border-radius: 6px;
+  padding: 2rem 1rem;
+  margin: 1rem 0;
+  text-align: center;
+  font-size: .9em;
+  opacity: .6;
+}
+
+/* ── Chart subtitle ──────────────────────────────────── */
+.chart-subtitle {
+  font-size: .82em;
+  opacity: .55;
+  margin: -.1rem 0 .8rem;
+}
+
+/* ── Control bar — wraps selectors horizontally ───────── */
+.control-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  background: var(--theme-background-alt);
+  border-radius: 8px;
+  padding: .8rem 1rem;
+  margin: 1rem 0 1.2rem;
+  border-top: 2px solid var(--nbr-green);
+}
+.control-bar > * { min-width: 0; }
+.control-bar form { margin: 0; }
+.control-bar label { font-size: .75em !important; opacity: .65; }
+.control-bar select { font-size: .88em !important; }
+
+/* ── Correction log ──────────────────────────────────── */
+.correction-log {
+  border-left: 4px solid #f0a500;
+  background: var(--theme-background-alt);
+  border-radius: 6px;
+  padding: .7rem 1rem;
+  margin: 1rem 0;
+  font-size: .87em;
+}
+.correction-log strong { color: #f0a500; display: block; margin-bottom: .4rem; }
+.correction-item { display: flex; flex-direction: column; gap: 2px; padding: .35rem 0; border-top: 1px solid var(--theme-foreground-faintest); }
+.correction-item .badge { font-weight: 700; color: var(--nbr-amber); font-size: .88em; }
+.correction-item .meta { opacity: .5; font-size: .82em; }
+
+/* ── Tables ──────────────────────────────────────────── */
+.observablehq table { font-size: .88em !important; }
+.observablehq table th {
+  text-transform: uppercase;
+  letter-spacing: .7px;
+  font-size: .76em !important;
+  opacity: .6;
+  font-weight: 700;
+}
+.observablehq table td { font-feature-settings: "tnum"; }
+
+/* ── Inputs ──────────────────────────────────────────── */
+.observablehq form label { font-size: .82em; }
+
+/* ── Hero (Overview & About) ─────────────────────────── */
+.hero h1 { font-size: 1.9em; font-weight: 800; margin: 0 0 4px; }
+.hero h2 { font-size: 1.05em; opacity: .55; margin: 0 0 1rem; font-weight: 400; }
+.hero-stats { display: flex; gap: 2rem; flex-wrap: wrap; }
+.hero-stat span { display: block; font-size: 2em; font-weight: 800; line-height: 1; color: var(--nbr-gold); }
+.hero-stat { font-size: .8em; opacity: .6; text-transform: uppercase; letter-spacing: 1px; }

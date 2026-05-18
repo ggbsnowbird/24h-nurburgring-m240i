@@ -37,6 +37,8 @@ function fmtSec(s) {
 
 ---
 
+<div class="control-bar">
+
 ```js
 const refCar = view(Inputs.select(CARS, {
   label: "Reference car",
@@ -71,6 +73,8 @@ const selectedStint = view(Inputs.select(
   }
 ));
 ```
+
+</div>
 
 ```js
 const refStint = filteredStints.find(s => s.stint_no === selectedStint);
@@ -113,7 +117,7 @@ html`<div class="stint-meta">
 
 ## Sector heatmap
 
-Rows = drivers (sorted by total delta to best). Columns = sectors S1–S9. Cell = rank in that sector. Orange outline = reference.
+<div class="chart-subtitle">Rows = drivers, sorted by total delta to best · Columns = sectors S1–S9 · Cell = rank in that sector · Orange outline = reference</div>
 
 ```js
 const heatData = stintSectors.map(r => ({
@@ -204,7 +208,9 @@ Plot.plot({
 
 ---
 
-## Ranking by sector — select one sector
+## Ranking by sector
+
+<div class="control-bar">
 
 ```js
 const sectorSel = view(Inputs.select(
@@ -212,6 +218,8 @@ const sectorSel = view(Inputs.select(
   { label: "Sector", value: "S1" }
 ));
 ```
+
+</div>
 
 ```js
 const SECTOR_COLORS = {
@@ -228,23 +236,23 @@ function fmtSectorTime(sec) {
 ```
 
 ```js
-// Track map — right next to the sector selector, dark bg to kill the checkerboard
+// Track map — filter:invert + hue-rotate kills the white bg, keeps colours
 html`<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin:10px 0 16px">
 
-  <!-- Map card: white bg card so the webp (white bg) renders cleanly -->
+  <!-- Map card: dark theme. invert(1) makes white→black, hue-rotate(180) keeps track colours intact -->
   <div style="
     flex-shrink:0;
-    background:#ffffff;
+    background:var(--theme-background-alt);
     border-radius:10px;
-    border:3px solid ${selectedColor};
-    box-shadow:0 0 24px ${selectedColor}55;
+    border:1.5px solid ${selectedColor}77;
+    box-shadow:0 0 18px ${selectedColor}30;
     transition:border-color .25s,box-shadow .25s;
     padding:8px;
     overflow:hidden;
   ">
     <img src="${trackMapUrl}"
       alt="Nürburgring 24h — sector map"
-      style="width:280px;height:280px;object-fit:contain;display:block;">
+      style="width:280px;height:280px;object-fit:contain;display:block;filter:invert(1) hue-rotate(180deg)">
   </div>
 
   <!-- Sector pills: vertical stack, compact -->
@@ -293,10 +301,14 @@ const xPad   = (sMax - sBest) * 0.04;
 ```
 
 ```js
+html`<h3 style="margin:1.5rem 0 .25rem">${sectorSel} ranking — Stint ${selectedStint}</h3>
+<div class="chart-subtitle">${refStint?.driver_name} on track — best ${sectorSel} time per driver in window</div>${sectorBarData.length === 0 ? html`<div class="empty-state">No sector data for this selection.</div>` : ''}`
+```
+
+```js
 Plot.plot({
-  title: `${sectorSel} ranking — Stint ${selectedStint} · ${refStint?.driver_name}`,
   width,
-  height: Math.max(140, sectorBarData.length * 32 + 60),
+  height: Math.max(140, sectorBarData.length * 26 + 60),
   marginLeft: 12,
   marginRight: 180,
   style: { background: "transparent", color: "#ccc", fontSize: "12px" },
@@ -372,8 +384,12 @@ const maxDelta = d3.quantile(
 ```
 
 ```js
+html`<h3 style="margin:1.5rem 0 .25rem">Delta to best per sector</h3>
+<div class="chart-subtitle">Reference driver (orange) vs other drivers in the window — gap to fastest sector time</div>`
+```
+
+```js
 Plot.plot({
-  title: `Delta to best per sector — orange = ${refDriver === "All drivers" ? `#${refCar}` : refDriver}`,
   width,
   height: 280,
   marginLeft: 48,
