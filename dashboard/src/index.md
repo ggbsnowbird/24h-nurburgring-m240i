@@ -47,8 +47,10 @@ const lapsWithDate = allLaps
 
 // All unique drivers sorted by car number then name
 const allDrivers = [...new Map(
-  allLaps.map(d => [`${d.car_no}||${d.driver}`, { driver: d.driver, car_no: d.car_no, label: `#${d.car_no} ${d.driver}` }])
-).values()].sort((a,b) => a.car_no - b.car_no || a.driver.localeCompare(b.driver));
+  allLaps
+    .filter(d => d.driver != null)
+    .map(d => [`${d.car_no}||${d.driver}`, { driver: d.driver, car_no: d.car_no, label: `#${d.car_no} ${d.driver}` }])
+).values()].sort((a,b) => a.car_no - b.car_no || (a.driver ?? "").localeCompare(b.driver ?? ""));
 ```
 
 ```js
