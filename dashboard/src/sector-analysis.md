@@ -111,120 +111,7 @@ html`<div class="stint-meta">
 
 ---
 
-## Track map & sector heatmap
-
-```js
-// Colour of each sector segment matching the track map image
-const SECTOR_COLORS = {
-  1: "#22c55e",  // green
-  2: "#16a34a",  // dark green
-  3: "#0d9488",  // teal
-  4: "#06b6d4",  // cyan
-  5: "#3b82f6",  // blue
-  6: "#8b5cf6",  // purple
-  7: "#d946ef",  // pink/magenta
-  8: "#e11d48",  // crimson
-  9: "#ef4444"   // red
-};
-```
-
-```js
-const selectedSectorNum = +sectorSel.slice(1);
-const selectedColor = SECTOR_COLORS[selectedSectorNum] ?? "#888";
-
-function fmtSectorTime(sec) {
-  if (sec == null) return "—";
-  return sec < 60 ? `${sec.toFixed(3)}s` : `${Math.floor(sec/60)}:${(sec%60).toFixed(3).padStart(6,'0')}`;
-}
-```
-
-```js
-html`<div class="track-map-card" style="--sector-color:${selectedColor}">
-
-  <!-- Map image — glows in the selected sector colour -->
-  <div class="track-map-img-wrap" style="box-shadow:0 0 0 2px ${selectedColor}40, 0 0 24px ${selectedColor}30">
-    <img src="${trackMapUrl}" alt="Nürburgring 24h — sector map" class="track-map-img">
-  </div>
-
-  <!-- Sector pills — one per sector, active one highlighted -->
-  <div class="track-map-pills">
-    ${sectorNums.map(s => {
-      const c = SECTOR_COLORS[s] ?? "#888";
-      const active = s === selectedSectorNum;
-      const rows = stintSectors.filter(r => r.sector === s);
-      const best = rows.length ? Math.min(...rows.map(r => r.sector_time_sec)) : null;
-      const p1driver = rows.find(r => r.rank === 1);
-      return html`<div class="sector-pill ${active ? 'sector-pill--active' : ''}"
-        style="--c:${c};border-color:${active ? c : c+'55'};background:${active ? c+'22' : 'transparent'}">
-        <span class="sector-pill-label" style="color:${c}">S${s}</span>
-        <span class="sector-pill-time">${fmtSectorTime(best)}</span>
-        ${active && p1driver ? html`<span class="sector-pill-p1">P1 ${p1driver.comp_driver} #${p1driver.comp_car_no}</span>` : ''}
-      </div>`;
-    })}
-  </div>
-
-</div>
-
-<style>
-.track-map-card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 1.2rem;
-}
-.track-map-img-wrap {
-  border-radius: 10px;
-  overflow: hidden;
-  background: var(--theme-background-alt);
-  transition: box-shadow .3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
-}
-.track-map-img {
-  width: 100%;
-  max-width: 420px;
-  height: auto;
-  display: block;
-  margin: 0 auto;
-}
-.track-map-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.sector-pill {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 10px 3px 7px;
-  border-radius: 20px;
-  border: 1.5px solid transparent;
-  transition: all .2s;
-  font-family: "Roboto Condensed", sans-serif;
-}
-.sector-pill--active {
-  box-shadow: 0 0 8px var(--c);
-}
-.sector-pill-label {
-  font-weight: 800;
-  font-size: .82em;
-  letter-spacing: .5px;
-  min-width: 20px;
-}
-.sector-pill-time {
-  font-family: "JetBrains Mono", monospace;
-  font-size: .78em;
-  opacity: .75;
-}
-.sector-pill-p1 {
-  font-size: .72em;
-  opacity: .6;
-  margin-left: 2px;
-}
-</style>`
-```
+## Sector heatmap
 
 Rows = drivers (sorted by total delta to best). Columns = sectors S1–S9. Cell = rank in that sector. Orange outline = reference.
 
@@ -324,6 +211,68 @@ const sectorSel = view(Inputs.select(
   sectorNums.map(s => `S${s}`),
   { label: "Sector", value: "S1" }
 ));
+```
+
+```js
+const SECTOR_COLORS = {
+  1: "#22c55e", 2: "#16a34a", 3: "#0d9488",
+  4: "#06b6d4", 5: "#3b82f6", 6: "#8b5cf6",
+  7: "#d946ef", 8: "#e11d48", 9: "#ef4444"
+};
+const selectedSectorNum = +sectorSel.slice(1);
+const selectedColor = SECTOR_COLORS[selectedSectorNum] ?? "#888";
+function fmtSectorTime(sec) {
+  if (sec == null) return "—";
+  return sec < 60 ? `${sec.toFixed(3)}s` : `${Math.floor(sec/60)}:${(sec%60).toFixed(3).padStart(6,'0')}`;
+}
+```
+
+```js
+// Track map — right next to the sector selector, dark bg to kill the checkerboard
+html`<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin:10px 0 16px">
+
+  <!-- Map card: dark background makes transparent PNG areas invisible -->
+  <div style="
+    flex-shrink:0;
+    background:#0d0d0d;
+    border-radius:10px;
+    border:2px solid ${selectedColor}55;
+    box-shadow:0 0 20px ${selectedColor}30;
+    transition:border-color .25s,box-shadow .25s;
+    padding:10px;
+  ">
+    <img src="${trackMapUrl}"
+      alt="Nürburgring 24h — sector map"
+      style="width:280px;height:280px;object-fit:contain;display:block;">
+  </div>
+
+  <!-- Sector pills: vertical stack, compact -->
+  <div style="display:flex;flex-direction:column;gap:4px;padding-top:4px">
+    <div style="font-size:.72em;opacity:.4;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:4px">Sectors</div>
+    ${sectorNums.map(s => {
+      const c = SECTOR_COLORS[s] ?? "#888";
+      const active = s === selectedSectorNum;
+      const rows = stintSectors.filter(r => r.sector === s);
+      const best = rows.length ? Math.min(...rows.map(r => r.sector_time_sec)) : null;
+      const p1 = rows.find(r => r.rank === 1);
+      return html`<div style="
+        display:flex;align-items:center;gap:7px;
+        padding:3px 10px 3px 8px;
+        border-radius:20px;
+        border:1.5px solid ${active ? c : c+'44'};
+        background:${active ? c+'1a' : 'transparent'};
+        box-shadow:${active ? `0 0 7px ${c}66` : 'none'};
+        transition:all .2s;
+        font-family:'Roboto Condensed',sans-serif;
+      ">
+        <span style="font-weight:800;font-size:.82em;color:${c};min-width:18px">S${s}</span>
+        <span style="font-size:.78em;opacity:.7;font-family:'JetBrains Mono',monospace">${fmtSectorTime(best)}</span>
+        ${active && p1 ? html`<span style="font-size:.7em;opacity:.5;margin-left:2px">· P1 ${p1.comp_driver} #${p1.comp_car_no}</span>` : ''}
+      </div>`;
+    })}
+  </div>
+
+</div>`
 ```
 
 ```js
