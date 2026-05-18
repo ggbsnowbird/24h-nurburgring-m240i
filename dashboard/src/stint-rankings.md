@@ -152,9 +152,9 @@ const stintRows = filteredRanking
   .sort((a,b) => a.rank_by_best - b.rank_by_best);
 
 const refStint = filteredStints.find(s => s.stint_no === selectedStint);
-const refBestSec = stintRows.find(r => r.comp_car_no === refCar)?.best_laptime_sec;
+const p1Sec = stintRows[0]?.best_laptime_sec ?? 560;  // P1 best lap = gap reference
 const xDomainMax = d3.quantile(stintRows.map(r=>r.best_laptime_sec).sort(d3.ascending), 0.9) * 1.02;
-const xDomainMin = (d3.min(stintRows, r => r.best_laptime_sec) ?? 560) * 0.99;
+const xDomainMin = p1Sec * 0.99;
 ```
 
 <div class="stint-meta">
@@ -212,8 +212,9 @@ Plot.plot({
       x: d => d.best_laptime_sec + (xDomainMax - xDomainMin) * 0.012,
       y: d => `${d.comp_driver} #${d.comp_car_no}`,
       text: d => {
-        const gap = d.best_laptime_sec - xDomainMin;
-        return `#${d.comp_car_no} ${d.comp_driver}  ${fmtSec(d.best_laptime_sec)}  +${gap.toFixed(1)}s`;
+        const gap = d.best_laptime_sec - p1Sec;
+        const gapStr = gap < 0.05 ? "P1" : `+${gap.toFixed(1)}s`;
+        return `#${d.comp_car_no} ${d.comp_driver}  ${fmtSec(d.best_laptime_sec)}  ${gapStr}`;
       },
       textAnchor: "start",
       fontSize: 10,
@@ -236,14 +237,14 @@ Inputs.table(stintRows.map(r => ({
   "Driver": r.comp_driver,
   "Best": fmtSec(r.best_laptime_sec),
   "Avg": fmtSec(r.avg_laptime_sec),
-  "Gap": r.comp_car_no === refCar && r.comp_driver === refDriver
+  "Gap vs P1": r.rank_by_best === 1
     ? "—"
-    : `+${((r.best_laptime_sec ?? 0) - (xDomainMin ?? 0)).toFixed(1)}s`,
+    : `+${((r.best_laptime_sec ?? 0) - p1Sec).toFixed(1)}s`,
   "Laps": r.laps_in_window,
   "Window": `${r.ref_window_start.slice(11,16)}→${r.ref_window_end.slice(11,16)}`
 })), {
   sort: "P",
-  width: { P: 42, Car: 52, Driver: 130, Best: 80, Avg: 80, Gap: 72, Laps: 52, Window: 120 }
+  width: { P: 42, Car: 52, Driver: 130, Best: 80, Avg: 80, "Gap vs P1": 90, Laps: 52, Window: 120 }
 })
 ```
 
