@@ -29,10 +29,20 @@ function fmtSec(s) {
 <div class="info-box">
   Outlap (first lap of each stint) excluded — cold tyres / pit exit.<br>
   Laps &gt; 11:30 (690s) excluded — driver swap / Safety Car / Code 60.<br>
-  Each driver is ranked against all M240i cars on track in the <strong>same time window</strong>.
+  Each driver is ranked against all M240i cars on track in the <strong>same time window</strong>.<br>
+  Window extended 4 min before stint start to include drivers finishing a lap just before.
 </div>
 
-${corrections.length > 0 ? `<div class="correction-log"><strong>⚠ Manual corrections</strong>${corrections.map(c=>`<div class="correction-item"><span class="badge">#${c.car_no} · Stint ${c.stint_no}</span><span>${c.reason}</span><span class="meta">Laps ${c.original_lap_start}–${c.original_lap_end} → <strong>${c.corrected_lap_start}–${c.corrected_lap_end}</strong> · ${c.corrected_at.slice(0,10)}</span></div>`).join('')}</div>` : ""}
+```js
+corrections.length > 0 ? html`<div class="correction-log">
+  <strong>⚠ Manual corrections</strong>
+  ${corrections.map(c => html`<div class="correction-item">
+    <span class="badge">#${c.car_no} · Stint ${c.stint_no}</span>
+    <span>${c.reason}</span>
+    <span class="meta">Laps ${c.original_lap_start}–${c.original_lap_end} → <strong>${c.corrected_lap_start}–${c.corrected_lap_end}</strong> · ${c.corrected_at.slice(0,10)}</span>
+  </div>`)}
+</div>` : html``
+```
 
 ---
 
@@ -75,50 +85,60 @@ const maxRank = d3.max(filteredRanking, r => r.rank_by_best) ?? 15;
 
 ---
 
-## Rank evolution across stints
+## Rank evolution — real race time axis
 
 ```js
-const rankLine = refDriver === "All drivers"
-  ? selfRows
-  : filteredRanking.filter(r => r.comp_driver === refDriver && r.comp_car_no === refCar);
+// Join selfRows with stint start time for proper temporal x axis
+const rankLineWithTime = selfRows.map(r => ({
+  ...r,
+  stint_start: new Date((filteredStints.find(s => s.stint_no === r.ref_stint_no)?.day_time_start ?? "").replace(' ','T') + 'Z'),
+  stint_label: `S${r.ref_stint_no}`
+})).filter(r => r.stint_start && !isNaN(r.stint_start));
 ```
 
 ```js
 Plot.plot({
-  title: `${refDriver === "All drivers" ? "All stints" : refDriver} — rank by best lap per stint`,
+  title: `${refDriver === "All drivers" ? "All stints" : refDriver} — rank by best lap (real race time)`,
   width,
   height: 320,
   marginLeft: 48,
-  marginRight: 16,
+  marginRight: 40,
   style: { background: "transparent", color: "#ccc", fontSize: "12px" },
-  x: { label: "Stint →", tickFormat: d => `S${d}`, tickSpacing: 32 },
+  x: {
+    label: "Race time (CEST) →",
+    type: "time",
+    tickFormat: d => {
+      const h = d.getUTCHours() + 2;
+      return `${(h%24).toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')}`;
+    }
+  },
   y: {
     label: "↓ Rank (1 = fastest)",
     domain: [1, maxRank + 1],
     reverse: false,
-    tickFormat: d => d % 2 === 0 ? `P${d}` : ""
+    tickFormat: d => Number.isInteger(d) ? `P${d}` : ""
   },
   marks: [
     Plot.gridY({ stroke: "#2a2a2a" }),
     Plot.ruleY([1], { stroke: "#f0c040", strokeDasharray: "4,3", strokeWidth: 1.5 }),
     Plot.ruleY([3], { stroke: "#4caf50", strokeDasharray: "2,4", strokeWidth: 1, opacity: 0.5 }),
-    Plot.line(rankLine, {
-      x: "ref_stint_no",
+    Plot.line(rankLineWithTime, {
+      x: "stint_start",
       y: "rank_by_best",
       stroke: d => CAR_COLORS[d.ref_car_no] ?? "#ff9800",
       strokeWidth: 2.5,
-      curve: "monotone-x"
+      curve: "linear"
     }),
-    Plot.dot(rankLine, {
-      x: "ref_stint_no",
+    Plot.dot(rankLineWithTime, {
+      x: "stint_start",
       y: "rank_by_best",
       fill: d => CAR_COLORS[d.ref_car_no] ?? "#ff9800",
       r: 5,
       tip: true,
-      title: d => `Stint ${d.ref_stint_no} · ${d.ref_driver}\nRank P${d.rank_by_best} / ${maxRank}\nBest: ${fmtSec(d.best_laptime_sec)}\nLaps in window: ${d.laps_in_window}\n${d.ref_window_start.slice(11,16)}→${d.ref_window_end.slice(11,16)} UTC`
+      title: d => `${d.stint_label} · ${d.ref_driver}\nP${d.rank_by_best} / ${maxRank}\nBest: ${fmtSec(d.best_laptime_sec)}\nLaps in window: ${d.laps_in_window}\n${d.ref_window_start.slice(11,16)}→${d.ref_window_end.slice(11,16)} UTC`
     }),
-    Plot.text(rankLine, {
-      x: "ref_stint_no",
+    Plot.text(rankLineWithTime, {
+      x: "stint_start",
       y: "rank_by_best",
       text: d => `P${d.rank_by_best}`,
       dy: -13,
@@ -152,17 +172,19 @@ const stintRows = filteredRanking
   .sort((a,b) => a.rank_by_best - b.rank_by_best);
 
 const refStint = filteredStints.find(s => s.stint_no === selectedStint);
-const p1Sec = stintRows[0]?.best_laptime_sec ?? 560;  // P1 best lap = gap reference
+const p1Sec = stintRows[0]?.best_laptime_sec ?? 560;
 const xDomainMax = d3.quantile(stintRows.map(r=>r.best_laptime_sec).sort(d3.ascending), 0.9) * 1.02;
 const xDomainMin = p1Sec * 0.99;
 ```
 
-<div class="stint-meta">
+```js
+html`<div class="stint-meta">
   <span>🏎 #${refStint?.car_no} ${refStint?.car_drivers}</span>
   <span>Driver: <strong>${refStint?.driver_name}</strong></span>
   <span>Laps ${refStint?.lap_start}–${refStint?.lap_end} (${refStint?.lap_count} valid)</span>
   <span>${refStint?.day_time_start?.slice(11,16)}→${refStint?.day_time_end?.slice(11,16)} UTC</span>
-</div>
+</div>`
+```
 
 ```js
 Plot.plot({
@@ -173,7 +195,7 @@ Plot.plot({
   marginRight: 16,
   style: { background: "transparent", color: "#ccc", fontSize: "12px" },
   x: {
-    label: "Best lap (s) →",
+    label: "Best lap →",
     domain: [xDomainMin, xDomainMax],
     tickFormat: s => fmtSec(s)
   },
@@ -192,22 +214,17 @@ Plot.plot({
       x: "best_laptime_sec",
       y: d => `${d.comp_driver} #${d.comp_car_no}`,
       fill: d => d.rank_by_best,
-      inset: 2,
-      rx: 3,
+      inset: 2, rx: 3,
       tip: true,
       title: d => `P${d.rank_by_best} · #${d.comp_car_no} ${d.comp_driver}\nBest: ${fmtSec(d.best_laptime_sec)}\nAvg: ${fmtSec(d.avg_laptime_sec)}\nLaps: ${d.laps_in_window}`
     }),
-    // Label inside bar: rank
     Plot.text(stintRows, {
       x: d => xDomainMin + (xDomainMax - xDomainMin) * 0.01,
       y: d => `${d.comp_driver} #${d.comp_car_no}`,
       text: d => `P${d.rank_by_best}`,
-      textAnchor: "start",
-      fontSize: 10,
-      fontWeight: "bold",
+      textAnchor: "start", fontSize: 10, fontWeight: "bold",
       fill: d => d.rank_by_best <= 3 ? "#fff" : "#eee"
     }),
-    // Label outside bar: car# driver + time + gap
     Plot.text(stintRows, {
       x: d => d.best_laptime_sec + (xDomainMax - xDomainMin) * 0.012,
       y: d => `${d.comp_driver} #${d.comp_car_no}`,
@@ -216,15 +233,11 @@ Plot.plot({
         const gapStr = gap < 0.05 ? "P1" : `+${gap.toFixed(1)}s`;
         return `#${d.comp_car_no} ${d.comp_driver}  ${fmtSec(d.best_laptime_sec)}  ${gapStr}`;
       },
-      textAnchor: "start",
-      fontSize: 10,
-      fill: "#bbb"
+      textAnchor: "start", fontSize: 10, fill: "#bbb"
     }),
     Plot.ruleX(stintRows.filter(r => r.comp_car_no === refCar), {
       x: d => d.best_laptime_sec,
-      stroke: "#ff9800",
-      strokeWidth: 2,
-      strokeDasharray: "3,2"
+      stroke: "#ff9800", strokeWidth: 2, strokeDasharray: "3,2"
     })
   ]
 })
@@ -237,9 +250,7 @@ Inputs.table(stintRows.map(r => ({
   "Driver": r.comp_driver,
   "Best": fmtSec(r.best_laptime_sec),
   "Avg": fmtSec(r.avg_laptime_sec),
-  "Gap vs P1": r.rank_by_best === 1
-    ? "—"
-    : `+${((r.best_laptime_sec ?? 0) - p1Sec).toFixed(1)}s`,
+  "Gap vs P1": r.rank_by_best === 1 ? "—" : `+${((r.best_laptime_sec ?? 0) - p1Sec).toFixed(1)}s`,
   "Laps": r.laps_in_window,
   "Window": `${r.ref_window_start.slice(11,16)}→${r.ref_window_end.slice(11,16)}`
 })), {

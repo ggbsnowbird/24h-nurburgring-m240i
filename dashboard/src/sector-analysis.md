@@ -98,19 +98,21 @@ const driverOrder = driverSummary.map(d => d.label);
 const maxRank = d3.max(stintSectors, d => d.rank) ?? 10;
 ```
 
-<div class="stint-meta">
+```js
+html`<div class="stint-meta">
   <span>🏎 #${refStint?.car_no} ${refStint?.car_drivers}</span>
   <span>Driver on ref: <strong>${refStint?.driver_name}</strong></span>
   <span>Laps ${refStint?.lap_start}–${refStint?.lap_end}</span>
   <span>${refStint?.day_time_start?.slice(11,16)}→${refStint?.day_time_end?.slice(11,16)} UTC</span>
   <span style="opacity:.5">${driverOrder.length} drivers · ${nSectors} sectors</span>
-</div>
+</div>`
+```
 
 ---
 
 ## Sector rank heatmap
 
-> Rows = drivers (sorted by total delta to best). Columns = sectors S1→S${nSectors}. Cell = rank in that sector. Orange outline = reference.
+Rows = drivers (sorted by total delta to best). Columns = sectors S1–S9. Cell = rank in that sector. Orange outline = reference.
 
 ```js
 const heatData = stintSectors.map(r => ({
