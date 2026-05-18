@@ -6,7 +6,6 @@ title: Overview
 const stints   = await FileAttachment("data/stints.json").json();
 const allLaps  = await FileAttachment("data/all_laps.json").json();
 const logoUrl  = await FileAttachment("assets/logo-main.png").url();
-const bannerUrl = await FileAttachment("assets/banner.jpg").url();
 ```
 
 ```js
@@ -21,47 +20,15 @@ const totalLaps = stints.reduce((s,d) => s + d.lap_count, 0);
 ```
 
 ```js
-// ── Banner ──────────────────────────────────────────────────────
-html`<div class="nbr-banner" style="
-  position: relative;
-  width: 100%;
-  height: 180px;
-  overflow: hidden;
-  border-radius: 8px;
-  margin-bottom: 1.5rem;
-">
-  <img src="${bannerUrl}" style="
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    object-fit: cover;
-    object-position: center 40%;
-  " alt="54th ADAC Ravenol 24h Nürburgring 2026">
-
-  <!-- Dark gradient overlay: left strong, right transparent -->
-  <div style="
-    position: absolute; inset: 0;
-    background: linear-gradient(to right, rgba(0,0,0,.82) 0%, rgba(0,0,0,.55) 45%, rgba(0,0,0,.1) 100%);
-  "></div>
-
-  <!-- Bottom fade for blending -->
-  <div style="
-    position: absolute; bottom: 0; left: 0; right: 0; height: 60px;
-    background: linear-gradient(to bottom, transparent, rgba(0,0,0,.5));
-  "></div>
-
-  <!-- Content overlay -->
-  <div style="
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column; justify-content: center;
-    padding: 0 2rem;
-    gap: 6px;
-  ">
-    <img src="${logoUrl}" style="height:52px;width:auto;margin-bottom:2px" alt="ADAC Ravenol 24h NBR">
-    <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-top:4px">
-      <div class="banner-stat"><span>${CARS.length}</span>Cars</div>
-      <div class="banner-stat"><span>${stints.length}</span>Stints</div>
-      <div class="banner-stat"><span>${totalLaps}</span>Valid laps</div>
-    </div>
+html`<div class="hero">
+  <img src="${logoUrl}" style="height:64px;width:auto;margin-bottom:12px;display:block" alt="54th ADAC Ravenol 24h Nürburgring 2026">
+  <h1>54th ADAC Ravenol 24h Nürburgring</h1>
+  <h2>BMW M240i Racing Cup · May 14–17, 2026</h2>
+  <div class="hero-stats">
+    <div class="hero-stat"><span>${CARS.length}</span>cars</div>
+    <div class="hero-stat"><span>${stints.length}</span>clean stints</div>
+    <div class="hero-stat"><span>${totalLaps}</span>valid laps</div>
+    <div class="hero-stat"><span style="font-size:.75em">outlaps &amp; laps&nbsp;&gt;11:30 excluded</span></div>
   </div>
 </div>`
 ```
@@ -252,6 +219,10 @@ html`<div class="grid grid-cols-3">${summary.map((c,i) =>
 ```
 
 <style>
-.banner-stat { font-size: 0.72em; color: rgba(255,255,255,.7); text-transform: uppercase; letter-spacing: 1.2px; }
-.banner-stat span { display: block; font-size: 2.2em; font-weight: 800; line-height: 1; color: #fff; }
+.hero { padding: 1.5rem 0 1rem; }
+.hero h1 { font-size: 1.9em; font-weight: 800; margin: 0 0 4px; }
+.hero h2 { font-size: 1.05em; opacity: 0.55; margin: 0 0 1rem; font-weight: 400; }
+.hero-stats { display: flex; gap: 2rem; flex-wrap: wrap; }
+.hero-stat span { display: block; font-size: 2em; font-weight: 800; line-height: 1; }
+.hero-stat { font-size: 0.8em; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
 </style>
