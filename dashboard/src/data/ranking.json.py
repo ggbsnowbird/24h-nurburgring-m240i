@@ -17,7 +17,8 @@ rows = cur.execute("""
         ROUND(avg_laptime_sec,3)  AS avg_laptime_sec,
         rank_by_best, rank_by_avg
     FROM stint_ranking
-    WHERE best_laptime_sec IS NOT NULL AND best_laptime_sec < 1200
+    WHERE best_laptime_sec IS NOT NULL
+      AND best_laptime_sec < 690
     ORDER BY ref_car_no, ref_stint_no, rank_by_best
 """).fetchall()
 

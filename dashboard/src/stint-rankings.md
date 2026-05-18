@@ -14,49 +14,32 @@ const CAR_COLORS = {
   653: "#9c27b0", 658: "#00bcd4", 665: "#f44336", 667: "#8bc34a",
   669: "#ff5722", 670: "#3f51b5", 677: "#ffc107"
 };
-
-const CARS = [...new Set(ranking.map(d => d.ref_car_no))].sort((a,b)=>a-b);
-
-// Driver list for reference car
+const CARS = [...new Set(stints.map(d => d.car_no))].sort((a,b) => a-b);
 function driversOf(car) {
   return [...new Set(stints.filter(s=>s.car_no===car).map(s=>s.driver_name).filter(Boolean))].sort();
+}
+function fmtSec(s) {
+  if (!s) return "—";
+  return `${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`;
 }
 ```
 
 # Stint Rankings
 
-> For each stint, all M240i drivers on track **at the same time** are ranked by best lap.  
-> This enables fair, condition-comparable performance comparison.
+<div class="info-box">
+  Outlap (first lap of each stint) excluded — cold tyres / pit exit.<br>
+  Laps &gt; 11:30 (690s) excluded — driver swap / Safety Car / Code 60.<br>
+  Each driver is ranked against all M240i cars on track in the <strong>same time window</strong>.
+</div>
 
-```js
-// Correction callout — shown when the selected car/driver has a corrected stint
-const relevantCorrections = corrections.filter(c =>
-  c.car_no === refCar &&
-  (refDriver === "All drivers" || c.original_lap_start !== c.corrected_lap_start)
-);
-```
-
-${corrections.length > 0 ? html`
-<div class="correction-log">
-  <strong>⚠ Correction log</strong>
-  ${corrections.map(c => html`
-    <div class="correction-item">
-      <span class="badge">#${c.car_no} · Stint ${c.stint_no}</span>
-      <span>${c.reason}</span>
-      <span class="meta">Laps ${c.original_lap_start}–${c.original_lap_end} → <strong>${c.corrected_lap_start}–${c.corrected_lap_end}</strong> · Applied ${c.corrected_at.slice(0,10)}</span>
-    </div>
-  `)}
-</div>` : ""}
+${corrections.length > 0 ? `<div class="correction-log"><strong>⚠ Manual corrections</strong>${corrections.map(c=>`<div class="correction-item"><span class="badge">#${c.car_no} · Stint ${c.stint_no}</span><span>${c.reason}</span><span class="meta">Laps ${c.original_lap_start}–${c.original_lap_end} → <strong>${c.corrected_lap_start}–${c.corrected_lap_end}</strong> · ${c.corrected_at.slice(0,10)}</span></div>`).join('')}</div>` : ""}
 
 ---
 
 ```js
 const refCar = view(Inputs.select(CARS, {
   label: "Reference car",
-  format: c => {
-    const d = stints.find(s=>s.car_no===c)?.car_drivers ?? "";
-    return `#${c} — ${d}`;
-  },
+  format: c => `#${c} — ${stints.find(s=>s.car_no===c)?.car_drivers ?? ""}`,
   value: 652
 }));
 ```
@@ -65,29 +48,29 @@ const refCar = view(Inputs.select(CARS, {
 const refDrivers = driversOf(refCar);
 const refDriver = view(Inputs.select(["All drivers", ...refDrivers], {
   label: "Driver",
-  value: "All drivers"
+  value: refDrivers.includes("Boutonnet") ? "Boutonnet" : "All drivers"
 }));
 ```
 
 ```js
-// Filter stints for ref car/driver
 const filteredStints = stints.filter(s =>
   s.car_no === refCar &&
   (refDriver === "All drivers" || s.driver_name === refDriver) &&
-  s.best_laptime_sec < 1200
+  s.best_laptime_sec < 690
 );
 
-// Filter ranking rows for those stints
 const filteredRanking = ranking.filter(r =>
   r.ref_car_no === refCar &&
   (refDriver === "All drivers" || r.ref_driver === refDriver) &&
-  r.best_laptime_sec < 1200
+  r.best_laptime_sec < 690
 );
 
-// Self-rows (ref driver in their own stints)
 const selfRows = filteredRanking.filter(r =>
-  r.comp_car_no === refCar && r.comp_driver === (refDriver === "All drivers" ? r.ref_driver : refDriver)
+  r.comp_car_no === refCar &&
+  (refDriver === "All drivers" ? r.comp_driver === r.ref_driver : r.comp_driver === refDriver)
 );
+
+const maxRank = d3.max(filteredRanking, r => r.rank_by_best) ?? 15;
 ```
 
 ---
@@ -95,71 +78,69 @@ const selfRows = filteredRanking.filter(r =>
 ## Rank evolution across stints
 
 ```js
+const rankLine = refDriver === "All drivers"
+  ? selfRows
+  : filteredRanking.filter(r => r.comp_driver === refDriver && r.comp_car_no === refCar);
+```
+
+```js
 Plot.plot({
-  title: `${refDriver === "All drivers" ? "All drivers" : refDriver} — rank by best lap per stint`,
-  width: 900,
-  height: 340,
-  marginLeft: 50,
-  style: { background: "transparent", color: "#ccc" },
-  x: { label: "Stint →", tickFormat: d => `S${d}` },
-  y: { label: "↓ Rank (1 = fastest)", reverse: false, domain: [1, 22] },
+  title: `${refDriver === "All drivers" ? "All stints" : refDriver} — rank by best lap per stint`,
+  width,
+  height: 320,
+  marginLeft: 48,
+  marginRight: 16,
+  style: { background: "transparent", color: "#ccc", fontSize: "12px" },
+  x: { label: "Stint →", tickFormat: d => `S${d}`, tickSpacing: 32 },
+  y: {
+    label: "↓ Rank (1 = fastest)",
+    domain: [1, maxRank + 1],
+    reverse: false,
+    tickFormat: d => d % 2 === 0 ? `P${d}` : ""
+  },
   marks: [
-    Plot.ruleY([1], { stroke: "#f0c040", strokeDasharray: "4,4", strokeWidth: 1.5 }),
-    Plot.ruleY([5], { stroke: "#4caf50", strokeDasharray: "2,4", strokeWidth: 1 }),
-    Plot.line(
-      refDriver === "All drivers"
-        ? selfRows
-        : filteredRanking.filter(r => r.comp_driver === refDriver && r.comp_car_no === refCar),
-      {
-        x: "ref_stint_no",
-        y: "rank_by_best",
-        stroke: d => CAR_COLORS[d.ref_car_no] ?? "#ff9800",
-        strokeWidth: 2.5,
-        curve: "monotone-x"
-      }
-    ),
-    Plot.dot(
-      refDriver === "All drivers"
-        ? selfRows
-        : filteredRanking.filter(r => r.comp_driver === refDriver && r.comp_car_no === refCar),
-      {
-        x: "ref_stint_no",
-        y: "rank_by_best",
-        fill: d => CAR_COLORS[d.ref_car_no] ?? "#ff9800",
-        r: 5,
-        tip: true,
-        title: d => `Stint ${d.ref_stint_no} · ${d.ref_driver}\nRank: ${d.rank_by_best}\nBest: ${Math.floor(d.best_laptime_sec/60)}:${String(Math.round(d.best_laptime_sec%60)).padStart(2,'0')}\nLaps in window: ${d.laps_in_window}\n${d.ref_window_start.slice(11,16)} → ${d.ref_window_end.slice(11,16)} UTC`
-      }
-    ),
-    Plot.text(
-      refDriver === "All drivers"
-        ? selfRows
-        : filteredRanking.filter(r => r.comp_driver === refDriver && r.comp_car_no === refCar),
-      {
-        x: "ref_stint_no",
-        y: "rank_by_best",
-        text: d => `${d.rank_by_best}`,
-        dy: -12,
-        fontSize: 10,
-        fill: "#ccc"
-      }
-    )
+    Plot.gridY({ stroke: "#2a2a2a" }),
+    Plot.ruleY([1], { stroke: "#f0c040", strokeDasharray: "4,3", strokeWidth: 1.5 }),
+    Plot.ruleY([3], { stroke: "#4caf50", strokeDasharray: "2,4", strokeWidth: 1, opacity: 0.5 }),
+    Plot.line(rankLine, {
+      x: "ref_stint_no",
+      y: "rank_by_best",
+      stroke: d => CAR_COLORS[d.ref_car_no] ?? "#ff9800",
+      strokeWidth: 2.5,
+      curve: "monotone-x"
+    }),
+    Plot.dot(rankLine, {
+      x: "ref_stint_no",
+      y: "rank_by_best",
+      fill: d => CAR_COLORS[d.ref_car_no] ?? "#ff9800",
+      r: 5,
+      tip: true,
+      title: d => `Stint ${d.ref_stint_no} · ${d.ref_driver}\nRank P${d.rank_by_best} / ${maxRank}\nBest: ${fmtSec(d.best_laptime_sec)}\nLaps in window: ${d.laps_in_window}\n${d.ref_window_start.slice(11,16)}→${d.ref_window_end.slice(11,16)} UTC`
+    }),
+    Plot.text(rankLine, {
+      x: "ref_stint_no",
+      y: "rank_by_best",
+      text: d => `P${d.rank_by_best}`,
+      dy: -13,
+      fontSize: 10,
+      fill: "#aaa"
+    })
   ]
 })
 ```
 
 ---
 
-## Stint detail table
+## Stint detail
 
 ```js
 const selectedStint = view(Inputs.select(
   filteredStints.map(s => s.stint_no),
   {
-    label: "Select stint",
+    label: "Stint",
     format: n => {
       const s = filteredStints.find(x => x.stint_no === n);
-      return `Stint ${n} — ${s?.driver_name} · Laps ${s?.lap_start}–${s?.lap_end} · ${s?.day_time_start?.slice(11,16)}→${s?.day_time_end?.slice(11,16)} UTC`;
+      return `Stint ${n} · ${s?.driver_name} · L${s?.lap_start}–${s?.lap_end} · ${s?.day_time_start?.slice(11,16)}→${s?.day_time_end?.slice(11,16)} UTC`;
     }
   }
 ));
@@ -171,31 +152,38 @@ const stintRows = filteredRanking
   .sort((a,b) => a.rank_by_best - b.rank_by_best);
 
 const refStint = filteredStints.find(s => s.stint_no === selectedStint);
+const refBestSec = stintRows.find(r => r.comp_car_no === refCar)?.best_laptime_sec;
+const xDomainMax = d3.quantile(stintRows.map(r=>r.best_laptime_sec).sort(d3.ascending), 0.9) * 1.02;
+const xDomainMin = (d3.min(stintRows, r => r.best_laptime_sec) ?? 560) * 0.99;
 ```
 
 <div class="stint-meta">
-  ${refStint ? `
-    <span>🏎 #${refStint.car_no} ${refStint.car_drivers}</span>
-    <span>Driver: <strong>${refStint.driver_name}</strong></span>
-    <span>Laps ${refStint.lap_start}–${refStint.lap_end} (${refStint.lap_count} laps)</span>
-    <span>${refStint.day_time_start?.slice(11,16)} → ${refStint.day_time_end?.slice(11,16)} UTC</span>
-  ` : ''}
+  <span>🏎 #${refStint?.car_no} ${refStint?.car_drivers}</span>
+  <span>Driver: <strong>${refStint?.driver_name}</strong></span>
+  <span>Laps ${refStint?.lap_start}–${refStint?.lap_end} (${refStint?.lap_count} valid)</span>
+  <span>${refStint?.day_time_start?.slice(11,16)}→${refStint?.day_time_end?.slice(11,16)} UTC</span>
 </div>
 
 ```js
-// Heatmap-style table
 Plot.plot({
-  title: `Stint ${selectedStint} — All drivers ranked by best lap`,
-  width: 820,
-  height: Math.max(200, stintRows.length * 32 + 60),
-  marginLeft: 160,
-  marginRight: 100,
-  style: { background: "transparent", color: "#ccc" },
-  x: { label: "Best lap (s) →", domain: [540, 1000] },
-  y: { label: null, domain: stintRows.map(r => `${r.comp_driver} #${r.comp_car_no}`) },
+  title: `Stint ${selectedStint} — ranked by best lap (outlap excluded)`,
+  width,
+  height: Math.max(180, stintRows.length * 30 + 70),
+  marginLeft: 168,
+  marginRight: 110,
+  style: { background: "transparent", color: "#ccc", fontSize: "12px" },
+  x: {
+    label: "Best lap (s) →",
+    domain: [xDomainMin, xDomainMax],
+    tickFormat: s => fmtSec(s)
+  },
+  y: {
+    label: null,
+    domain: stintRows.map(r => `${r.comp_driver} #${r.comp_car_no}`)
+  },
   color: {
-    domain: [1, Math.max(...stintRows.map(r=>r.rank_by_best))],
-    range: ["#4caf50","#ff9800","#e63946"],
+    domain: [1, stintRows.length],
+    range: ["#1b5e20","#4caf50","#ff9800","#e63946","#7f0000"],
     legend: false
   },
   marks: [
@@ -203,69 +191,66 @@ Plot.plot({
       x: "best_laptime_sec",
       y: d => `${d.comp_driver} #${d.comp_car_no}`,
       fill: d => d.rank_by_best,
-      opacity: 0.8,
+      inset: 2,
+      rx: 3,
       tip: true,
-      title: d => `#${d.comp_car_no} ${d.comp_driver}\nRank: ${d.rank_by_best}\nBest: ${Math.floor(d.best_laptime_sec/60)}:${String(Math.round(d.best_laptime_sec%60)).padStart(2,'0')}\nAvg: ${Math.floor(d.avg_laptime_sec/60)}:${String(Math.round(d.avg_laptime_sec%60)).padStart(2,'0')}\nLaps: ${d.laps_in_window}`
+      title: d => `P${d.rank_by_best} · #${d.comp_car_no} ${d.comp_driver}\nBest: ${fmtSec(d.best_laptime_sec)}\nAvg: ${fmtSec(d.avg_laptime_sec)}\nLaps: ${d.laps_in_window}`
     }),
     Plot.text(stintRows, {
-      x: d => d.best_laptime_sec + 4,
+      x: d => d.best_laptime_sec + (xDomainMax - xDomainMin) * 0.01,
       y: d => `${d.comp_driver} #${d.comp_car_no}`,
-      text: d => `#${d.rank_by_best}  ${Math.floor(d.best_laptime_sec/60)}:${String(Math.round(d.best_laptime_sec%60)).padStart(2,'0')}`,
+      text: d => `P${d.rank_by_best}  ${fmtSec(d.best_laptime_sec)}`,
       textAnchor: "start",
-      fontSize: 11,
-      fill: "#ddd"
+      fontSize: 10,
+      fill: "#ccc"
     }),
-    // Highlight ref car
-    Plot.ruleX(
-      stintRows.filter(r => r.comp_car_no === refCar),
-      { x: d => d.best_laptime_sec, stroke: "#ff9800", strokeWidth: 2 }
-    )
+    Plot.ruleX(stintRows.filter(r => r.comp_car_no === refCar), {
+      x: d => d.best_laptime_sec,
+      stroke: "#ff9800",
+      strokeWidth: 2,
+      strokeDasharray: "3,2"
+    })
   ]
 })
 ```
 
 ```js
-// Full detail table
 Inputs.table(stintRows.map(r => ({
-  "Rank": r.rank_by_best,
-  "Car #": r.comp_car_no,
+  "P": r.rank_by_best,
+  "Car": `#${r.comp_car_no}`,
   "Driver": r.comp_driver,
-  "Best lap": `${Math.floor(r.best_laptime_sec/60)}:${String(Math.round(r.best_laptime_sec%60)).padStart(2,'0')}`,
-  "Avg lap": `${Math.floor(r.avg_laptime_sec/60)}:${String(Math.round(r.avg_laptime_sec%60)).padStart(2,'0')}`,
-  "Laps in window": r.laps_in_window,
+  "Best": fmtSec(r.best_laptime_sec),
+  "Avg": fmtSec(r.avg_laptime_sec),
+  "Gap": r.comp_car_no === refCar && r.comp_driver === refDriver
+    ? "—"
+    : `+${((r.best_laptime_sec ?? 0) - (xDomainMin ?? 0)).toFixed(1)}s`,
+  "Laps": r.laps_in_window,
   "Window": `${r.ref_window_start.slice(11,16)}→${r.ref_window_end.slice(11,16)}`
 })), {
-  sort: "Rank",
-  width: { "Rank": 60, "Car #": 60, "Driver": 140, "Best lap": 90, "Avg lap": 90, "Laps in window": 120, "Window": 130 }
+  sort: "P",
+  width: { P: 42, Car: 52, Driver: 130, Best: 80, Avg: 80, Gap: 72, Laps: 52, Window: 120 }
 })
 ```
 
 <style>
+.info-box {
+  background: #161e1e; border-left: 3px solid #00bcd4;
+  border-radius: 6px; padding: .6rem 1rem; margin: 1rem 0;
+  font-size: .85em; line-height: 1.6; opacity: .85;
+}
 .stint-meta {
-  display: flex; gap: 1.5rem; flex-wrap: wrap;
+  display: flex; gap: 1.2rem; flex-wrap: wrap;
   background: #1a1a2e; border-radius: 8px;
-  padding: 0.75rem 1rem; margin: 1rem 0;
-  font-size: 0.9em; opacity: 0.85;
+  padding: .65rem 1rem; margin: .8rem 0;
+  font-size: .88em;
 }
 .stint-meta strong { color: #ff9800; }
-
 .correction-log {
-  border-left: 4px solid #f0a500;
-  background: #1e1a0e;
-  border-radius: 6px;
-  padding: 0.75rem 1rem;
-  margin: 1.2rem 0;
-  font-size: 0.88em;
+  border-left: 4px solid #f0a500; background: #1e1a0e;
+  border-radius: 6px; padding: .7rem 1rem; margin: 1rem 0; font-size: .87em;
 }
-.correction-log strong { color: #f0a500; display: block; margin-bottom: 0.5rem; }
-.correction-item {
-  display: flex; flex-direction: column; gap: 2px;
-  padding: 0.4rem 0; border-top: 1px solid #333;
-}
-.correction-item .badge {
-  font-weight: 700; color: #ff9800; font-size: 0.9em;
-}
-.correction-item .meta {
-  opacity: 0.55; font-size: 0.85em;
-}
+.correction-log strong { color: #f0a500; display: block; margin-bottom: .4rem; }
+.correction-item { display: flex; flex-direction: column; gap: 2px; padding: .35rem 0; border-top: 1px solid #333; }
+.correction-item .badge { font-weight: 700; color: #ff9800; font-size: .88em; }
+.correction-item .meta { opacity: .5; font-size: .82em; }
 </style>

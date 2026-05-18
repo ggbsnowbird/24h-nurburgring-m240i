@@ -4,67 +4,71 @@ title: Overview
 
 ```js
 const stints = await FileAttachment("data/stints.json").json();
-const ranking = await FileAttachment("data/ranking.json").json();
 ```
 
 ```js
-// Car color palette
 const CAR_COLORS = {
   195: "#e63946", 650: "#2196f3", 651: "#4caf50", 652: "#ff9800",
   653: "#9c27b0", 658: "#00bcd4", 665: "#f44336", 667: "#8bc34a",
   669: "#ff5722", 670: "#3f51b5", 677: "#ffc107"
 };
-
 const CARS = [...new Set(stints.map(d => d.car_no))].sort((a,b) => a-b);
 const carDrivers = Object.fromEntries(stints.map(d => [d.car_no, d.car_drivers]));
 ```
 
 <div class="hero">
   <h1>54th ADAC Ravenol 24h Nürburgring</h1>
-  <h2>BMW M240i Racing Cup — Driver Stint Analysis</h2>
-  <p>May 14–17, 2026 · Nürburgring Nordschleife (25,378 m) · ${CARS.length} cars · ${stints.length} stints analysed</p>
+  <h2>BMW M240i Racing Cup · May 14–17, 2026</h2>
+  <div class="hero-stats">
+    <div class="hero-stat"><span>${CARS.length}</span>cars</div>
+    <div class="hero-stat"><span>${stints.length}</span>clean stints</div>
+    <div class="hero-stat"><span>${stints.reduce((s,d)=>s+d.lap_count,0)}</span>valid laps</div>
+    <div class="hero-stat"><span style="font-size:.8em">outlaps &amp; laps&nbsp;&gt;11:30 excluded</span></div>
+  </div>
 </div>
 
 ---
 
-## Pace Overview — Best lap per stint
+## Pace map — best lap per stint over race time
 
 ```js
-// Build dataset: one row per stint
 const stintData = stints.map(d => ({
   ...d,
-  label: `#${d.car_no} ${d.driver_name}`,
   color: CAR_COLORS[d.car_no] ?? "#888",
-  time_str: d.best_laptime,
-  day_time_start_ms: new Date(d.day_time_start + "Z").getTime()
-})).filter(d => d.best_laptime_sec > 400);
+  day_start: new Date(d.day_time_start.replace(' ','T') + 'Z')
+})).filter(d => d.best_laptime_sec > 400 && d.best_laptime_sec < 690);
+
+const yMin = Math.floor(d3.min(stintData, d => d.best_laptime_sec) / 10) * 10;
+const yMax = Math.ceil(d3.max(stintData, d => d.best_laptime_sec) / 10) * 10;
 ```
 
 ```js
 Plot.plot({
-  title: "Best lap time per stint (all M240i cars)",
-  width: 960,
-  height: 420,
-  marginLeft: 60,
-  marginRight: 20,
-  style: { background: "transparent", color: "#ccc" },
+  width,
+  height: 400,
+  marginLeft: 68,
+  marginRight: 12,
+  style: { background: "transparent", color: "#ccc", fontSize: "12px" },
   x: {
-    label: "Race time (UTC) →",
+    label: "Race time (CEST) →",
     type: "time",
-    tickFormat: d => `${d.getUTCHours().toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')}`
+    tickFormat: d => {
+      const h = d.getUTCHours() + 2; // UTC→CEST
+      return `${(h%24).toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')}`;
+    }
   },
   y: {
-    label: "↑ Best lap (s)",
-    domain: [540, 900],
+    label: "↑ Best lap",
+    domain: [yMin, yMax],
     tickFormat: s => `${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`
   },
   marks: [
-    Plot.ruleY([570, 600, 630, 660], { stroke: "#333", strokeDasharray: "4,4" }),
+    Plot.gridY({ stroke: "#2a2a2a" }),
     Plot.dot(stintData, {
-      x: d => new Date(d.day_time_start + "Z"),
+      x: "day_start",
       y: "best_laptime_sec",
       fill: d => CAR_COLORS[d.car_no] ?? "#888",
-      r: d => Math.sqrt(d.lap_count) * 2.5,
+      r: d => Math.max(3, Math.sqrt(d.lap_count) * 2.2),
       opacity: 0.85,
       tip: true,
       title: d => `#${d.car_no} ${d.driver_name}\nBest: ${d.best_laptime}\nAvg: ${Math.floor(d.avg_laptime_sec/60)}:${String(Math.round(d.avg_laptime_sec%60)).padStart(2,'0')}\nLaps: ${d.lap_count}\n${d.day_time_start.slice(11,16)} UTC`
@@ -75,40 +79,43 @@ Plot.plot({
 
 ---
 
-## Cars & Crews
+## Cars & crews
 
 ```js
 const summary = CARS.map(car => {
-  const carStints = stints.filter(s => s.car_no === car);
-  const drivers = [...new Set(carStints.map(s => s.driver_name).filter(Boolean))];
-  const bestLap = carStints.reduce((best, s) =>
-    (!best || s.best_laptime_sec < best.best_laptime_sec) ? s : best, null);
+  const cs = stints.filter(s => s.car_no === car);
+  const best = cs.reduce((b, s) => (!b || s.best_laptime_sec < b.best_laptime_sec) ? s : b, null);
   return {
     car_no: car,
     drivers: carDrivers[car],
-    stints: carStints.length,
-    total_laps: carStints.reduce((s, d) => s + d.lap_count, 0),
-    best_lap: bestLap?.best_laptime ?? "—",
-    best_lap_sec: bestLap?.best_laptime_sec,
-    best_driver: bestLap?.driver_name ?? "—"
+    stints: cs.length,
+    total_laps: cs.reduce((s, d) => s + d.lap_count, 0),
+    best_lap: best?.best_laptime ?? "—",
+    best_lap_sec: best?.best_laptime_sec,
+    best_driver: best?.driver_name ?? "—"
   };
 }).sort((a,b) => (a.best_lap_sec??9999) - (b.best_lap_sec??9999));
 ```
 
 <div class="grid grid-cols-3">
-${summary.map(c => `
-  <div class="card" style="border-left: 4px solid ${CAR_COLORS[c.car_no]}">
-    <h3>#${c.car_no}</h3>
-    <p style="font-size:0.85em;opacity:0.7">${c.drivers}</p>
-    <p>Best: <strong>${c.best_lap}</strong> (${c.best_driver})</p>
-    <p style="opacity:0.6">${c.total_laps} laps · ${c.stints} stints</p>
+${summary.map((c,i) => `
+  <div class="card" style="border-left:4px solid ${CAR_COLORS[c.car_no]}">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3 style="margin:0">#${c.car_no}</h3>
+      <span style="font-size:1.1em;font-weight:700;color:${CAR_COLORS[c.car_no]}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':''} ${c.best_lap}</span>
+    </div>
+    <p style="font-size:0.82em;opacity:0.6;margin:4px 0">${c.drivers}</p>
+    <p style="margin:4px 0">Best by: <strong>${c.best_driver}</strong></p>
+    <p style="opacity:0.5;font-size:0.82em;margin:0">${c.total_laps} valid laps · ${c.stints} stints</p>
   </div>
 `).join('')}
 </div>
 
 <style>
-.hero { padding: 2rem 0 1rem; }
-.hero h1 { font-size: 2em; font-weight: 800; margin: 0; }
-.hero h2 { font-size: 1.2em; opacity: 0.7; margin: 0.3em 0 0.5em; font-weight: 400; }
-.hero p  { opacity: 0.5; font-size: 0.9em; }
+.hero { padding: 1.5rem 0 1rem; }
+.hero h1 { font-size: 1.9em; font-weight: 800; margin: 0 0 4px; }
+.hero h2 { font-size: 1.05em; opacity: 0.55; margin: 0 0 1rem; font-weight: 400; }
+.hero-stats { display: flex; gap: 2rem; flex-wrap: wrap; }
+.hero-stat span { display: block; font-size: 2em; font-weight: 800; line-height: 1; }
+.hero-stat { font-size: 0.8em; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
 </style>
