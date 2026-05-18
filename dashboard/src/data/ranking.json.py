@@ -1,11 +1,22 @@
 #!/usr/bin/env python3
 import sqlite3, json
 from pathlib import Path
+from datetime import datetime, timezone, timedelta
+
+CEST = timedelta(hours=2)
 
 db = Path(__file__).parent.parent.parent.parent / "m240i_sector_times.db"
 conn = sqlite3.connect(db)
 conn.row_factory = sqlite3.Row
 cur = conn.cursor()
+
+def utc_to_cest(s):
+    if not s: return None
+    try:
+        dt = datetime.strptime(s, '%Y-%m-%d %H:%M:%S.%f').replace(tzinfo=timezone.utc)
+        return (dt + CEST).strftime('%Y-%m-%dT%H:%M:%S')
+    except:
+        return s
 
 rows = cur.execute("""
     SELECT
@@ -22,5 +33,12 @@ rows = cur.execute("""
     ORDER BY ref_car_no, ref_stint_no, rank_by_best
 """).fetchall()
 
-print(json.dumps([dict(r) for r in rows]))
+out = []
+for r in rows:
+    d = dict(r)
+    d['ref_window_start'] = utc_to_cest(d['ref_window_start'])
+    d['ref_window_end']   = utc_to_cest(d['ref_window_end'])
+    out.append(d)
+
+print(json.dumps(out))
 conn.close()

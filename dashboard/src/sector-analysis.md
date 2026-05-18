@@ -65,7 +65,7 @@ const selectedStint = view(Inputs.select(
     label: "Stint",
     format: n => {
       const s = filteredStints.find(x => x.stint_no === n);
-      return `Stint ${n} · ${s?.driver_name} · L${s?.lap_start}–${s?.lap_end} · ${s?.day_time_start?.slice(11,16)}→${s?.day_time_end?.slice(11,16)} UTC`;
+      return `Stint ${n} · ${s?.driver_name} · L${s?.lap_start}–${s?.lap_end} · ${s?.day_time_start?.slice(11,16)}→${s?.day_time_end?.slice(11,16)} CEST`;
     }
   }
 ));
@@ -233,7 +233,7 @@ Plot.plot({
   title: `${sectorSel} ranking — Stint ${selectedStint} · ${refStint?.driver_name}`,
   width,
   height: Math.max(140, sectorBarData.length * 32 + 60),
-  marginLeft: 148,
+  marginLeft: 12,
   marginRight: 180,
   style: { background: "transparent", color: "#ccc", fontSize: "12px" },
   x: {
@@ -243,6 +243,7 @@ Plot.plot({
   },
   y: {
     label: null,
+    axis: null,
     domain: sectorBarData.map(r => r.label)
   },
   marks: [
@@ -262,7 +263,17 @@ Plot.plot({
       strokeWidth: 1.5,
       strokeDasharray: "4,3"
     }),
-    // Labels: rank + time + delta
+    // Driver name inside bar (white on dark bars, dark on orange ref bar)
+    Plot.text(sectorBarData, {
+      x: d => (sBest - xPad) + xPad * 0.3,
+      y: "label",
+      text: d => d.label,
+      textAnchor: "start",
+      fontSize: 10,
+      fontWeight: d => d.is_ref ? "bold" : "normal",
+      fill: d => d.is_ref ? "#000" : "#ddd"
+    }),
+    // Labels outside bar: rank + time + delta
     Plot.text(sectorBarData, {
       x: d => d.sector_time_sec + xPad * 0.5,
       y: "label",

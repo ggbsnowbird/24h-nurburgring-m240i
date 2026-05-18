@@ -91,7 +91,7 @@ const maxRank = d3.max(filteredRanking, r => r.rank_by_best) ?? 15;
 // Join selfRows with stint start time for proper temporal x axis
 const rankLineWithTime = selfRows.map(r => ({
   ...r,
-  stint_start: new Date((filteredStints.find(s => s.stint_no === r.ref_stint_no)?.day_time_start ?? "").replace(' ','T') + 'Z'),
+  stint_start: new Date(filteredStints.find(s => s.stint_no === r.ref_stint_no)?.day_time_start ?? ""),
   stint_label: `S${r.ref_stint_no}`
 })).filter(r => r.stint_start && !isNaN(r.stint_start));
 ```
@@ -108,8 +108,7 @@ Plot.plot({
     label: "Race time (CEST) →",
     type: "time",
     tickFormat: d => {
-      const h = d.getUTCHours() + 2;
-      return `${(h%24).toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')}`;
+      return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
     }
   },
   y: {
@@ -135,7 +134,7 @@ Plot.plot({
       fill: d => CAR_COLORS[d.ref_car_no] ?? "#ff9800",
       r: 5,
       tip: true,
-      title: d => `${d.stint_label} · ${d.ref_driver}\nP${d.rank_by_best} / ${maxRank}\nBest: ${fmtSec(d.best_laptime_sec)}\nLaps in window: ${d.laps_in_window}\n${d.ref_window_start.slice(11,16)}→${d.ref_window_end.slice(11,16)} UTC`
+      title: d => `${d.stint_label} · ${d.ref_driver}\nP${d.rank_by_best} / ${maxRank}\nBest: ${fmtSec(d.best_laptime_sec)}\nLaps in window: ${d.laps_in_window}\n${d.ref_window_start.slice(11,16)}→${d.ref_window_end.slice(11,16)} CEST`
     }),
     Plot.text(rankLineWithTime, {
       x: "stint_start",
@@ -160,7 +159,7 @@ const selectedStint = view(Inputs.select(
     label: "Stint",
     format: n => {
       const s = filteredStints.find(x => x.stint_no === n);
-      return `Stint ${n} · ${s?.driver_name} · L${s?.lap_start}–${s?.lap_end} · ${s?.day_time_start?.slice(11,16)}→${s?.day_time_end?.slice(11,16)} UTC`;
+      return `Stint ${n} · ${s?.driver_name} · L${s?.lap_start}–${s?.lap_end} · ${s?.day_time_start?.slice(11,16)}→${s?.day_time_end?.slice(11,16)} CEST`;
     }
   }
 ));

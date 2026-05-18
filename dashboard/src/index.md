@@ -40,9 +40,9 @@ html`<div class="hero">
 > **Scatter** = each valid lap (outlap & laps >11:30 excluded). **Rolling min** = fastest lap completed in each 60-min sliding window. **Rolling avg** = mean in the same window. **±1σ band** = spread of the field.
 
 ```js
-// Convert all laps to Date objects and sort by time
+// Timestamps are already CEST — parse as-is (ISO local, no Z suffix)
 const lapsWithDate = allLaps
-  .map(d => ({ ...d, t: new Date(d.day_time.replace(' ','T') + 'Z') }))
+  .map(d => ({ ...d, t: new Date(d.day_time) }))
   .sort((a,b) => a.t - b.t);
 
 // Rolling window stats: for each lap, compute min/avg/sigma
@@ -86,8 +86,8 @@ function fmtSec(s) {
   return `${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`;
 }
 function fmtTime(d) {
-  const h = (d.getUTCHours() + 2) % 24;
-  return `${String(h).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`;
+  // Timestamps are CEST — use local hours directly
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 ```
 
@@ -109,10 +109,10 @@ Plot.plot({
     tickFormat: fmtSec
   },
   marks: [
-    // Night band (approx 22:00 → 06:00 CEST = 20:00 → 04:00 UTC)
+    // Night band 22:00 → 06:00 CEST (timestamps now local CEST)
     Plot.rectX([1], {
-      x1: new Date("2026-05-16T20:00:00Z"),
-      x2: new Date("2026-05-17T04:00:00Z"),
+      x1: new Date("2026-05-16T22:00:00"),
+      x2: new Date("2026-05-17T06:00:00"),
       fill: "#ffffff", fillOpacity: 0.03
     }),
 
