@@ -5,7 +5,7 @@ title: Sector Analysis
 ```js
 const sectors    = await FileAttachment("data/sectors.json").json();
 const stints     = await FileAttachment("data/stints.json").json();
-const trackMapUrl = await FileAttachment("assets/track-sectors.png").url();
+const trackMapUrl = await FileAttachment("assets/track-sectors.webp").url();
 ```
 
 ```js
@@ -231,19 +231,20 @@ function fmtSectorTime(sec) {
 // Track map — right next to the sector selector, dark bg to kill the checkerboard
 html`<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin:10px 0 16px">
 
-  <!-- Map card: dark background makes transparent PNG areas invisible -->
+  <!-- Map card: mix-blend-mode:multiply makes the white bg disappear on dark theme -->
   <div style="
     flex-shrink:0;
-    background:#0d0d0d;
+    background:#111;
     border-radius:10px;
-    border:2px solid ${selectedColor}55;
-    box-shadow:0 0 20px ${selectedColor}30;
+    border:2px solid ${selectedColor}66;
+    box-shadow:0 0 22px ${selectedColor}35;
     transition:border-color .25s,box-shadow .25s;
-    padding:10px;
+    padding:8px;
+    overflow:hidden;
   ">
     <img src="${trackMapUrl}"
       alt="Nürburgring 24h — sector map"
-      style="width:280px;height:280px;object-fit:contain;display:block;">
+      style="width:280px;height:280px;object-fit:contain;display:block;mix-blend-mode:multiply;">
   </div>
 
   <!-- Sector pills: vertical stack, compact -->
