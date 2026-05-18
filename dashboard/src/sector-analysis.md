@@ -103,7 +103,7 @@ html`<div class="stint-meta">
   <span>🏎 #${refStint?.car_no} ${refStint?.car_drivers}</span>
   <span>Driver on ref: <strong>${refStint?.driver_name}</strong></span>
   <span>Laps ${refStint?.lap_start}–${refStint?.lap_end}</span>
-  <span>${refStint?.day_time_start?.slice(11,16)}→${refStint?.day_time_end?.slice(11,16)} UTC</span>
+  <span>${refStint?.day_time_start?.slice(11,16)}→${refStint?.day_time_end?.slice(11,16)} CEST</span>
   <span style="opacity:.5">${driverOrder.length} drivers · ${nSectors} sectors</span>
 </div>`
 ```
