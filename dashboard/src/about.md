@@ -2,54 +2,91 @@
 title: About
 ---
 
-# À propos de cette application
+```js
+const carUrl = await FileAttachment("assets/car-652.webp").url();
+```
 
-Cette application a été développée pour analyser les performances des pilotes de la classe **BMW M240i Racing Cup** lors du **54ème ADAC Ravenol 24h Nürburgring** (14-17 mai 2026).
+```js
+html`<div style="
+  position:relative;
+  width:100%;
+  height:320px;
+  border-radius:12px;
+  overflow:hidden;
+  margin-bottom:2rem;
+">
+  <img src="${carUrl}" alt="Car #652 Adrenalin Motorsport — 54th ADAC Ravenol 24h Nürburgring"
+    style="width:100%;height:100%;object-fit:cover;object-position:center 55%">
+  <div style="
+    position:absolute;inset:0;
+    background:linear-gradient(to top, rgba(0,0,0,.75) 0%, rgba(0,0,0,.1) 50%, transparent 100%);
+  "></div>
+  <div style="
+    position:absolute;bottom:0;left:0;right:0;
+    padding:1.5rem 1.8rem;
+  ">
+    <div style="font-family:'Roboto Condensed',sans-serif;font-weight:800;font-size:1.5em;letter-spacing:.5px;color:#fff">
+      #652 — Adrenalin Motorsport Team
+    </div>
+    <div style="font-size:.88em;opacity:.7;color:#fff;margin-top:2px">
+      Opran · Boutonnet · Laparra · Kravets &nbsp;·&nbsp; BMW M240i Racing Cup
+    </div>
+  </div>
+</div>`
+```
+
+# About this application
+
+This tool was built to analyse the performance data of **BMW M240i Racing Cup** drivers at the **54th ADAC Ravenol 24h Nürburgring** (May 14–17, 2026).
 
 ---
 
-## Ce que fait l'application
+## Data sources
 
-Les données proviennent de deux sources :
-- **Le PDF officiel des temps secteurs** de l'organisation (ADAC / wige Solutions) — contenant les temps par tour et les 9 partiels pour chaque voiture
-- **Le flux LiveTiming en temps réel** — permettant d'associer chaque tour à son heure exacte de la course (heure CEST, heure de Nürburgring)
+Two sources were combined:
+- **Official ADAC sector times PDF** (wige Solutions) — lap times and all 9 sector splits for every car in the M240i class
+- **LiveTiming WebSocket feed** — timestamps each lap with its exact real-world clock time (CEST, Nürburgring local time)
 
-Ces deux sources ont été croisées pour produire une base de données complète : **11 voitures · 127 stints · 791 tours valides**.
+Together they produce a clean dataset: **11 cars · 127 stints · 791 valid laps**.
 
-> Les outlaps (premier tour d'un relais, pneus froids / sortie des stands) et les tours de plus de 11 minutes 30 (changements de pilote, Safety Car, Code 60) sont systématiquement exclus des analyses.
+> Outlaps (first lap of each stint — cold tyres, pit exit) and laps over 11:30 (driver changes, Safety Car, Code 60) are systematically excluded from all analyses.
 
 ---
 
-## Les trois pages
+## The three pages
 
 ### 1. Overview
-Vue d'ensemble de la course. Le graphique principal montre **tous les tours valides** de la classe M240i sur l'axe du temps réel. Les lignes superposées représentent :
-- **Minimum roulant** (vert) — le meilleur temps réalisé dans la classe sur chaque fenêtre de 60 minutes : révèle l'évolution du potentiel absolu de la piste
-- **Moyenne roulante** (bleu) — la pace médiane du peloton sur la même fenêtre
-- **Bande ±1σ** (grisée) — le spread du peloton, qui s'élargit visiblement lors des épisodes de pluie ou de Safety Car
+Full race pace picture. Every valid lap is plotted on a real-time axis. Three rolling statistics are computed over a trailing window (adjustable: 15 / 30 / 60 min):
+- **P5 rolling min** (green) — 5th-percentile lap time in the trailing window, reflecting the true pace potential of the class at each moment — no future data used
+- **Rolling avg** (blue) — mean pace of the field in the same window
+- **±1σ band** (grey) — spread of the field, which visibly widens during rain or Safety Car periods
+
+A driver filter lets you isolate one or several drivers on the scatter while keeping the rolling stats over the whole field.
 
 ### 2. Stint Rankings
-Classement comparatif par relais. Pour un pilote donné, chaque relais est mis en regard de **tous les autres pilotes M240i sur la piste au même moment** — c'est la seule comparaison juste, car les conditions de piste (météo, gomme, température) sont alors identiques pour tous. La fenêtre est étendue de 4 minutes avant le début du relais pour inclure les pilotes qui finissaient leur dernier tour juste avant.
+Comparative ranking by stint. For a given driver, each stint is benchmarked against **all other M240i drivers on track at the same time** — the only fair comparison, as track conditions (weather, grip, temperature) are identical for everyone. The comparison window is extended 4 minutes before the stint start to capture drivers finishing a lap just before.
 
-### 3. Sector Analysis — le plus intéressant
+The ranking uses a **z-score normalised model** (not a simple lap time comparison) so that a driver who is P2/16 in a dense, competitive window is ranked fairly against one who is P1/6 in a quieter one.
 
-C'est selon moi la page la plus riche. Elle permet de voir **où se gagne et se perd le temps**, secteur par secteur, à l'intérieur d'un relais.
+### 3. Sector Analysis — the most insightful page
 
-Le Nordschleife est découpé en 9 secteurs (S1 à S9). Pour chaque relais de référence, tous les pilotes présents sur la piste dans la même fenêtre temporelle sont rankés sur chaque secteur. On obtient ainsi une heatmap qui montre immédiatement :
-- Sur quels secteurs un pilote est fort ou faible par rapport au peloton
-- Le **delta to best** par secteur — combien de secondes sont perdues par rapport au meilleur temps de la classe sur ce tronçon
-- Les secteurs où la variance est forte (conditions changeantes) vs stables
+In my view, this is the richest page. It shows **exactly where time is gained or lost**, sector by sector, within a stint.
 
-C'est cet outil qui permet de cibler précisément les zones de progrès possibles.
+The Nordschleife is split into 9 sectors (S1–S9). For each reference stint, all drivers present on track in the same time window are ranked on each sector independently. The result is a heatmap that immediately shows:
+- Which sectors a driver is strong or weak in relative to the field
+- The **delta to best** per sector — how many seconds are lost vs the class leader on that portion of the track
+- Which sectors show high variance (changing conditions) vs stable ones
 
----
-
-## Notes techniques
-
-- Les temps sont exprimés en heure **CEST** (UTC+2), heure locale de Nürburgring
-- Le secteur 7 (Nordschleife, ~3:30 à 4:00 min) est correctement pris en compte malgré sa durée atypique
-- Des corrections manuelles ont été appliquées sur certains relais (ex. crevaison Boutonnet stint 14) et sont tracées dans l'application
+This is the tool to use to pinpoint specific areas for improvement.
 
 ---
 
-*Application développée avec Observable Framework · Données ADAC / wige Solutions · LiveTiming*
+## Technical notes
+
+- All timestamps in **CEST (UTC+2)** — Nürburgring local time
+- Sector 7 (Nordschleife, ~3:30–4:00 min) handled correctly with a dynamic per-sector threshold
+- Manual corrections logged for specific stints (e.g. Boutonnet stint 14 — puncture, laps 93–96 excluded)
+
+---
+
+*Built with Observable Framework · Data: ADAC / wige Solutions · LiveTiming WebSocket*
