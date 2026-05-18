@@ -19,28 +19,22 @@ const totalLaps = stints.reduce((s,d) => s + d.lap_count, 0);
 ```
 
 ```js
-html`<div class="nbr-header">
-  <img src="${logoUrl}" class="nbr-logo" alt="54th ADAC Ravenol 24h Nürburgring 2026">
-  <div class="nbr-header-text">
-    <span class="nbr-badge">54th edition · May 14–17, 2026</span>
-    <span class="nbr-title">M240i Racing Cup — Stint Analysis</span>
-    <span class="nbr-subtitle">Nürburgring Nordschleife · 25,378 m</span>
+html`<div class="hero">
+  <img src="${logoUrl}" style="height:64px;width:auto;margin-bottom:12px;display:block" alt="54th ADAC Ravenol 24h Nürburgring 2026">
+  <h1>54th ADAC Ravenol 24h Nürburgring</h1>
+  <h2>BMW M240i Racing Cup · May 14–17, 2026</h2>
+  <div class="hero-stats">
+    <div class="hero-stat"><span>${CARS.length}</span>cars</div>
+    <div class="hero-stat"><span>${stints.length}</span>clean stints</div>
+    <div class="hero-stat"><span>${totalLaps}</span>valid laps</div>
+    <div class="hero-stat"><span style="font-size:.75em">outlaps &amp; laps&nbsp;&gt;11:30 excluded</span></div>
   </div>
-</div>`
-```
-
-```js
-html`<div class="hero-stats">
-  <div class="hero-stat"><span>${CARS.length}</span>Cars</div>
-  <div class="hero-stat"><span>${stints.length}</span>Clean stints</div>
-  <div class="hero-stat"><span>${totalLaps}</span>Valid laps</div>
-  <div class="hero-stat"><span style="font-size:.55em;color:var(--theme-foreground-muted)">Outlaps &amp; laps&nbsp;&gt;11:30 excluded</span></div>
 </div>`
 ```
 
 ---
 
-## Pace map — best lap per stint
+## Pace map — best lap per stint over race time
 
 ```js
 const stintData = stints.map(d => ({
@@ -57,14 +51,14 @@ Plot.plot({
   width,
   height: 400,
   marginLeft: 68,
-  marginRight: 16,
-  style: { background: "transparent", color: "var(--theme-foreground)", fontSize: "12px", fontFamily: '"Roboto Condensed", sans-serif' },
+  marginRight: 12,
+  style: { background: "transparent", color: "#ccc", fontSize: "12px" },
   x: {
     label: "Race time (CEST) →",
     type: "time",
     tickFormat: d => {
-      const h = (d.getUTCHours() + 2) % 24;
-      return `${String(h).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`;
+      const h = d.getUTCHours() + 2;
+      return `${(h%24).toString().padStart(2,'0')}:${d.getUTCMinutes().toString().padStart(2,'0')}`;
     }
   },
   y: {
@@ -73,7 +67,7 @@ Plot.plot({
     tickFormat: s => `${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,'0')}`
   },
   marks: [
-    Plot.gridY({ stroke: "var(--theme-foreground-faintest)" }),
+    Plot.gridY({ stroke: "#2a2a2a" }),
     Plot.dot(stintData, {
       x: "day_start",
       y: "best_laptime_sec",
@@ -96,27 +90,36 @@ const summary = CARS.map(car => {
   const cs = stints.filter(s => s.car_no === car);
   const best = cs.reduce((b, s) => (!b || s.best_laptime_sec < b.best_laptime_sec) ? s : b, null);
   return {
-    car_no: car, drivers: carDrivers[car], stints: cs.length,
+    car_no: car,
+    drivers: carDrivers[car],
+    stints: cs.length,
     total_laps: cs.reduce((s, d) => s + d.lap_count, 0),
     best_lap: best?.best_laptime ?? "—",
     best_lap_sec: best?.best_laptime_sec,
     best_driver: best?.driver_name ?? "—"
   };
 }).sort((a,b) => (a.best_lap_sec??9999) - (b.best_lap_sec??9999));
-
-const medals = ["🥇","🥈","🥉"];
 ```
 
 ```js
 html`<div class="grid grid-cols-3">${summary.map((c,i) =>
-  html`<div class="card" style="border-top:3px solid ${CAR_COLORS[c.car_no]};border-left:none">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-      <span style="font-size:1.3em;font-weight:800;font-family:'Roboto Condensed',sans-serif;color:${CAR_COLORS[c.car_no]}">#${c.car_no}</span>
-      <span style="font-size:1em;font-weight:700;font-family:'JetBrains Mono',monospace">${medals[i] ?? ""} ${c.best_lap}</span>
+  html`<div class="card" style="border-left:4px solid ${CAR_COLORS[c.car_no]}">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3 style="margin:0">#${c.car_no}</h3>
+      <span style="font-size:1.1em;font-weight:700;color:${CAR_COLORS[c.car_no]}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':''} ${c.best_lap}</span>
     </div>
-    <p style="font-size:0.8em;opacity:0.55;margin:0 0 6px;line-height:1.4">${c.drivers}</p>
-    <p style="margin:0 0 2px;font-size:.88em">Best: <strong style="color:${CAR_COLORS[c.car_no]}">${c.best_driver}</strong></p>
-    <p style="opacity:0.4;font-size:0.78em;margin:0">${c.total_laps} valid laps · ${c.stints} stints</p>
+    <p style="font-size:0.82em;opacity:0.6;margin:4px 0">${c.drivers}</p>
+    <p style="margin:4px 0">Best by: <strong>${c.best_driver}</strong></p>
+    <p style="opacity:0.5;font-size:0.82em;margin:0">${c.total_laps} valid laps · ${c.stints} stints</p>
   </div>`
 )}</div>`
 ```
+
+<style>
+.hero { padding: 1.5rem 0 1rem; }
+.hero h1 { font-size: 1.9em; font-weight: 800; margin: 0 0 4px; }
+.hero h2 { font-size: 1.05em; opacity: 0.55; margin: 0 0 1rem; font-weight: 400; }
+.hero-stats { display: flex; gap: 2rem; flex-wrap: wrap; }
+.hero-stat span { display: block; font-size: 2em; font-weight: 800; line-height: 1; }
+.hero-stat { font-size: 0.8em; opacity: 0.6; text-transform: uppercase; letter-spacing: 1px; }
+</style>
