@@ -149,3 +149,7 @@ tickFormat: d => {
 - `alt` modifier = cards use --theme-background-alt as foreground surface
 - Roboto Condensed loaded via Google Fonts in custom.css
 - Logo has transparent background — works on both dark and light
+- **Images with white background on dark theme**: use a white card bg (`background:#ffffff`)
+  with a coloured border. Do NOT use `mix-blend-mode:multiply` (black on black).
+  Do NOT use `filter:invert()` (inverts track colours too).
+  White card with coloured border is the clean, legible solution.

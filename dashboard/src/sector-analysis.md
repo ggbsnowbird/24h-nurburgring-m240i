@@ -231,20 +231,20 @@ function fmtSectorTime(sec) {
 // Track map — right next to the sector selector, dark bg to kill the checkerboard
 html`<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin:10px 0 16px">
 
-  <!-- Map card: mix-blend-mode:multiply makes the white bg disappear on dark theme -->
+  <!-- Map card: white bg card so the webp (white bg) renders cleanly -->
   <div style="
     flex-shrink:0;
-    background:#111;
+    background:#ffffff;
     border-radius:10px;
-    border:2px solid ${selectedColor}66;
-    box-shadow:0 0 22px ${selectedColor}35;
+    border:3px solid ${selectedColor};
+    box-shadow:0 0 24px ${selectedColor}55;
     transition:border-color .25s,box-shadow .25s;
     padding:8px;
     overflow:hidden;
   ">
     <img src="${trackMapUrl}"
       alt="Nürburgring 24h — sector map"
-      style="width:280px;height:280px;object-fit:contain;display:block;mix-blend-mode:multiply;">
+      style="width:280px;height:280px;object-fit:contain;display:block;">
   </div>
 
   <!-- Sector pills: vertical stack, compact -->
