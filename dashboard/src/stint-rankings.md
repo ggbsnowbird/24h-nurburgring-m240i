@@ -258,7 +258,7 @@ Plot.plot({
 ```
 
 ```js
-Inputs.table(stintRows.map(r => ({
+html`<div class="table-scroll">${Inputs.table(stintRows.map(r => ({
   "P": r.rank_by_best,
   "Car": `#${r.comp_car_no}`,
   "Driver": r.comp_driver,
@@ -270,7 +270,7 @@ Inputs.table(stintRows.map(r => ({
 })), {
   sort: "P",
   width: { P: 42, Car: 52, Driver: 130, Best: 80, Avg: 80, "Gap vs P1": 90, Laps: 52, Window: 120 }
-})
+})}</div>`
 ```
 
 <style>
