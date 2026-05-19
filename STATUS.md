@@ -32,6 +32,16 @@ Race LiveTiming session expired. Timestamps reconstructed from cumulative PDF la
 
 ---
 
+## Open items / next steps
+None blocking; the site is live and complete. Optional follow-ups for the next session:
+- **Investigate the 5 M240i `≥690s` stints** flagged by `check_class_consistency.py M240i` Check 1. Probably Code-60 / SC periods; either fix the extraction or relax the check.
+- **Browser-perf check** on `/sp9/sector-analysis` — `sectors.json` is now 53 MB (under GitHub's 100 MB limit but over the 50 MB recommended). Measure first-paint and scroll smoothness; if poor, consider gzip pre-compression, time-bucket split, or a server-side comparison function.
+- **Driver Scoring page** — composite z-score model (AvgZ + RobustZ + percentile rank), designed in chat per JOURNAL Session 6, not yet a dashboard page.
+- **Cloudflare Access auth** — plan in [PLAN-GT3-EXPANSION.md §12](PLAN-GT3-EXPANSION.md).
+- **Deduplicate legacy root pages** (`index.md`, `stint-rankings.md`, `sector-analysis.md`, `about.md`) now that `/m240i/` is the canonical home.
+
+---
+
 ## Dashboard pages (12 total)
 - `/` — landing page with class picker
 - `/m240i/overview`, `/m240i/stint-rankings`, `/m240i/sector-analysis`, `/m240i/about`
@@ -53,6 +63,7 @@ Race LiveTiming session expired. Timestamps reconstructed from cumulative PDF la
 ## Backup tags
 | Tag | State |
 |---|---|
+| `stable-post-sp9-42cars-20260519` | After 16-car SP9 fix — full 42-car GT3 grid live |
 | `stable-pre-sp9-20260519` | Before SP9 expansion |
 | `stable-pre-polish-swap-20260518` | Before polish |
 | `broken-polish-39c42bf` | Reference only |

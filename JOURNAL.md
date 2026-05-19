@@ -298,3 +298,27 @@ First re-run (after only fixing the char class) inserted 30 cars and 3694 laps. 
 - **Anchor model regex on a known make** rather than letting a generic char class consume drivers. A non-greedy `.+?` is happy to land the model boundary one word inside the drivers list if the make is unconstrained.
 - **`ANY_HEADER_RE` must reset `current_car`** regardless of whether the new header matches the target class. Otherwise rejected-class laps silently get attributed to the previous accepted car.
 - **GLOB vs LIKE on SQLite.** `LIKE '%Cup%'` is case-insensitive and would clobber the legit `#992` "CUP MR" entry; `GLOB '*Cup*'` is case-sensitive — use it when distinguishing on letter case.
+
+## Handoff notes (post-Session N+3)
+
+### State snapshot
+```
+M240i: 11 cars · 1147 laps · 132 stints
+SP9:   42 cars · 4369 laps · 379 stints
+Live: https://ggbsnowbird.github.io/24h-nurburgring-m240i/
+Last commit on main before handoff: 22a5077 fix(ui): use empty <span> not "" for empty correction-log branch (#4)
+Last successful deploy: GitHub Actions run #26109664212 (42s)
+Backup tag created: stable-post-sp9-42cars-20260519
+```
+
+### Verified after deploy
+- GitHub Actions auto-deployed `bcedc5c` (42-car SP9) in 42s — green.
+- Site live with all 42 SP9 cars visible in the legend and palette.
+- Two upstream PRs landed in parallel and merged cleanly: `#1` (mobile-responsive layout) and `#2`/`#4` (correction-log null-fix). No conflict with the SP9 changes.
+
+### What is NOT done — for the next agent
+- **`sectors.json` is 53 MB** (under GitHub's 100 MB hard limit but over the 50 MB recommended). Pushed with a warning. Acceptable for now; revisit if data grows. Mitigations available: gzip pre-compression, time-bucket split, or a server-side comparison function.
+- **`check_class_consistency.py M240i` returns 1 failure** (Check 1: 5 stints with `best_laptime_sec ≥ 690s`). Pre-existing — `extract_sp9.py` never touches M240i stints. Probably Code-60 / SC periods. Worth investigating if the script should return clean PASS on both classes.
+
+### Correction to the previous handoff
+The `f71a53c` handoff attributed the 16 missing cars to a missing `MODELS` allowlist. The real cause was the regex character class missing `()` plus a `current_car`-reset bug — see Session N+3 "Diagnosis" above. Trust the latest JOURNAL entry over older handoff commits.
