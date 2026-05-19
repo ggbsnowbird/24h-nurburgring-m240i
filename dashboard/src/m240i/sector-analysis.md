@@ -135,7 +135,7 @@ const heatData = stintSectors.map(r => ({
 Plot.plot({
   width,
   height: Math.max(160, driverOrder.length * 38 + 70),
-  marginLeft: 148,
+  marginLeft: width < 640 ? 60 : 148,
   marginBottom: 36,
   style: { background: "transparent", color: "#ccc", fontSize: "12px" },
   x: {
@@ -237,11 +237,10 @@ function fmtSectorTime(sec) {
 
 ```js
 // Track map — right next to the sector selector, dark bg to kill the checkerboard
-html`<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin:10px 0 16px">
+html`<div class="sector-map-row" style="margin:10px 0 16px">
 
   <!-- Map card: filter:invert + hue-rotate kills the white bg and preserves colours -->
   <div style="
-    flex-shrink:0;
     background:var(--theme-background-alt);
     border-radius:10px;
     border:1.5px solid ${selectedColor}77;
@@ -250,14 +249,14 @@ html`<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;mar
     padding:8px;
     overflow:hidden;
   ">
-    <img src="${trackMapUrl}"
+    <img class="sector-map-img" src="${trackMapUrl}"
       alt="Nürburgring 24h — sector map"
-      style="width:280px;height:280px;object-fit:contain;display:block;filter:invert(1) hue-rotate(180deg)">
+      style="filter:invert(1) hue-rotate(180deg)">
   </div>
 
-  <!-- Sector pills: vertical stack, compact -->
-  <div style="display:flex;flex-direction:column;gap:4px;padding-top:4px">
-    <div style="font-size:.72em;opacity:.4;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:4px">Sectors</div>
+  <!-- Sector pills: vertical stack on desktop, horizontal wrap on mobile -->
+  <div class="sector-pills-col">
+    <div style="font-size:.72em;opacity:.4;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:4px;width:100%">Sectors</div>
     ${sectorNums.map(s => {
       const c = SECTOR_COLORS[s] ?? "#888";
       const active = s === selectedSectorNum;
@@ -310,7 +309,7 @@ Plot.plot({
   width,
   height: Math.max(140, sectorBarData.length * 26 + 60),
   marginLeft: 12,
-  marginRight: 180,
+  marginRight: width < 640 ? 80 : 180,
   style: { background: "transparent", color: "#ccc", fontSize: "12px" },
   x: {
     label: "Sector time →",

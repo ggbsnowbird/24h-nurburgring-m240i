@@ -26,7 +26,7 @@ html`<div style="text-align:center;padding:2rem 0 1.5rem">
 ---
 
 ```js
-html`<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin:1.5rem 0">
+html`<div class="landing-cards" style="margin:1.5rem 0">
 
   <!-- M240i card -->
   <a href="./m240i/overview" style="text-decoration:none;color:inherit">
