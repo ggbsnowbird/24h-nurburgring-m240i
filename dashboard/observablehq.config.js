@@ -1,11 +1,26 @@
 export default {
-  title: "24h Nürburgring 2026 — M240i",
+  title: "24h Nürburgring 2026",
   root: "src",
   pages: [
-    { name: "Overview", path: "/" },
-    { name: "Stint Rankings", path: "/stint-rankings" },
-    { name: "Sector Analysis", path: "/sector-analysis" },
-    { name: "About", path: "/about" },
+    { name: "Home", path: "/" },
+    {
+      name: "M240i Racing Cup",
+      pages: [
+        { name: "Overview",        path: "/m240i/overview" },
+        { name: "Stint Rankings",  path: "/m240i/stint-rankings" },
+        { name: "Sector Analysis", path: "/m240i/sector-analysis" },
+        { name: "About",           path: "/m240i/about" },
+      ]
+    },
+    {
+      name: "SP9 GT3",
+      pages: [
+        { name: "Overview",        path: "/sp9/overview" },
+        { name: "Stint Rankings",  path: "/sp9/stint-rankings" },
+        { name: "Sector Analysis", path: "/sp9/sector-analysis" },
+        { name: "About",           path: "/sp9/about" },
+      ]
+    },
   ],
   theme: "dark",
   head: `<link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAFuUlEQVRYw+2XTWxcZxmFn3Pv2I4nTpzYie34h0DSJvY4cZpfRIACoWpL0xQKdMOqgkKpVIl2zYIFGyQkWEKDCqqQQOJPkLZQlCJRqwQ7DWmj1nbixJnUduraaRw7HseeGd97WHg82M5YNd3Aop9mpLnve77vO/P+nFcXPlz/46VSxvqHn5XjuBpctgBywWcJ2Sse5IXPYs/CAQYVkMZYdqI0rUBS/IitJ4DEkuNcvM7FKxFeiQ5y0akFNACx0F+0UmjqH362Hsc/b908/MDhrf3EiBszVWyszCBBeryOZFmWcyNb2dN4hXUVs1QEeabza6ivmuDa9HoCmcnZJAA1yQyjUxs4M7yNiZkkwCmJRxMr5sbxmOF3LRuu33tXUzphRE0yg4H8XIL8XMiGymn2NqXpHryTw3eeY2RqI5OzSTYmp3npwl6+d89vGJ+p4idd93HgIwPsbUwzPrOW9HhdfOPW2t/L8UC4EoHkjgfvEPpBIohaLo830PNuC9O5NXRebufs8DaGJmrpHWumsizHyxd3s37NDLEDbmaT9F9r5NL1BubikKGJTbQ3DDN0o5bBiU201V9FQoMTdS0oPFMyBXVHfxqQCL4GPKJi2ktBvTi1JVxaYUfhp3j9NsS3X/j4utgci6PwbsOaVfWS9Q7GBG4EslG+7PlXX3zgb1M3auLFsM9/9bcfrazKfEciaYgcJU4uqYFvnjgk249K+mGYiCpW28u2TwI3gXqAMJybPPKVP5w8fqw7txhX9dihZqAdCAEURuklBAKpynC3YPS/0BJLumqzY0E3gFFi5xeDHv/TQUnaE9vJgiln6Eosa98ZwVNAYpWXJzBHEQ0SDSBs54BTx794ekldRGJ9YG+TNF6I2hD4zeURcGzHLqF0pdRToh24z+aKVKzSHKBvPX9o67I0NQL1thdUbCQXzU0UCTz58ifC/Gz8deBpYO0qZXwt0j/B221v0Lxxg+HHt4GXdZGg/7kvnc0VCURZbwKeBNokrTb/c8ZXMZuAW17FnCk4MobTLM51FMVtkraV2NZn+5SkqMRZGUxa0u73IVoB1AFB4XlEeKxIIAgFYp9xlZYyuI54wrE7jx877Q86ch9/4dCngB/ZlBdM/8BMFgk89seD5cDh20Jvemyf/dlDr33gy+///g7ZbAHSC8E27lw4MwEQBsGW2N57u2x6KPJc7TdO7KuRAuwYESAJWREmr1DL1TJCjD1zdF6EWjqqE4W6qi74pyS9858+BuLYuxBNywmsSax98EDjPZ8GCBUSOSKK80ghb46+mp7K3RgC9hfgse3zCvRriT8XWzsMmoAjhRrAdrfNcJFAWB5gvBdTsTwFNZUN1ds3dlQHCgBRHlZQFlTQc62LsrDiEvAecAZ4z/bfMd02Y88c7V6csnrgCjBUeH5pNj83uyQCknqB4wWGRRZzcdZvvPuKapNbmM5Nejp/k5rKemyYi3N9kj4GDCJOYM4df+h0FiCVahVAX995214Pyhb+W4x4+5dfPuuSvZpqa10HfA4I4zh+5fyF/vH2VNs+oLmnt+9EKrUdQL29AysWZSrVFgD3Y/+rt+/8+84Updpa75V0xPYliWHDZkwzcBq0B1wrqQP4he0QGEE0C2UwTYic7VagS1K1IRbU2X5b0gGg23ZG0mdtX8zOzj43kL5SHNNhXd3mp5mffh2SmjE3gTsK33NAB+iCxG5g53zGtBPYj3jd9hck5Qtic5ek88AuSdttj8/b2A/KSCq/cPFS55L5Y7vC9ijQYzsCPgMaBLJAP1ALbgGfLAycg7YHgEHbbwGyvQvISDoLLrO5DEwAY0CXzYTtT9o+dfs4he9KmpUU27EwG4FJQwI0DTwFztpcF3QCSduTkhKFiNwC/gr8CsjbBAjP78dAA7BH0mvYb6zqxWS1K5XaWQlKCt3s6e3Ll8K0te0sl7Q+kDJv9fTNfvgu+H+3/g1mQJKVdlitTQAAAABJRU5ErkJggg==">
