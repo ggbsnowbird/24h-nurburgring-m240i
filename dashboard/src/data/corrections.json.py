@@ -2,7 +2,7 @@
 import sqlite3, json
 from pathlib import Path
 
-db = Path(__file__).parent.parent.parent.parent / "m240i_sector_times.db"
+db = Path(__file__).parent.parent.parent.parent / "nbr_sector_times.db"
 conn = sqlite3.connect(db)
 conn.row_factory = sqlite3.Row
 cur = conn.cursor()

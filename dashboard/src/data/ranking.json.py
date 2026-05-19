@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 CEST = timedelta(hours=2)
 
-db = Path(__file__).parent.parent.parent.parent / "m240i_sector_times.db"
+db = Path(__file__).parent.parent.parent.parent / "nbr_sector_times.db"
 conn = sqlite3.connect(db)
 conn.row_factory = sqlite3.Row
 cur = conn.cursor()
@@ -27,7 +27,7 @@ rows = cur.execute("""
         ROUND(best_laptime_sec,3) AS best_laptime_sec,
         ROUND(avg_laptime_sec,3)  AS avg_laptime_sec,
         rank_by_best, rank_by_avg
-    FROM stint_ranking
+    FROM stint_ranking_m240i
     WHERE best_laptime_sec IS NOT NULL
       AND best_laptime_sec < 690
     ORDER BY ref_car_no, ref_stint_no, rank_by_best
