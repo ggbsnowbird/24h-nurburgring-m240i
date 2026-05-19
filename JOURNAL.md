@@ -129,3 +129,105 @@ Full expansion of the dashboard to cover the SP9 GT3 class alongside M240i.
 - `tr '[:lower:]' '[:upper:]'` converts `m240i` to `M240I` but DB has `M240i` — always hardcode class strings
 - LiveTiming sessions are ephemeral — only stream DATA during active race. No archival endpoint.
 - Cumulative lap time reconstruction works perfectly for closed-event data (no SC gaps matter here because the timestamps include all laps, SC or not)
+
+## Session N+2 — SP9 driver fixes + AGENTS.md + incomplete SP9 extraction
+
+### What was done
+- **AGENTS.md** created at repo root: skill invocation table (25 skills), 8 critical rules, working conventions, key file map
+- **20 external skills** copied from `Skills/skills/` into `.opencode/skills/` (deploy-to-vercel, publish-to-pages, github-actions-*, python-*, sql-*, kpi-dashboard-design, frontend-design, data-storytelling, etc.)
+- **SP9 driver strings fixed**: all 26 existing SP9 cars had truncated driver names (trailing `/` due to regex stopping before last pilot). 119 stints corrected. Full driver lists now include e.g. `van der Linde` (#1), `Juncadella` (#3), etc.
+- **Bocolacci investigation**: car #17 is `Andlauer / Boccolacci / Menzel / Picariello` (two c's). DNF'd around 1am. Car #992 drivers were `Griesemann / Griesemann / Adorf` — "Holzer" is the team name, not a pilot.
+- **Full SP9 audit**: PDF contains **42 GT3 cars**, not 26. 16 were missed due to incomplete MODELS list in `scripts/extract_sp9.py` (missing `Porsche 911 GT3 R` and `Ford Mustang GT3`).
+
+### What is NOT done — handoff to next agent
+
+**🔴 Critical**: Add the 16 missing SP9 cars to the DB.
+
+**Exact steps**:
+
+1. **Fix `scripts/extract_sp9.py`** — add to the `MODELS` list:
+   ```python
+   'Porsche 911 GT3 R EVO',
+   'Porsche 911 GT3 R',
+   'Ford Mustang GT3',
+   ```
+   The list is around line 20. Also update the header regex to be more robust — the broader pattern that worked:
+   ```python
+   MODELS.sort(key=len, reverse=True)  # must always sort desc
+   ```
+
+2. **Run extraction for missing cars only**:
+   ```bash
+   python3 scripts/extract_sp9.py --missing-only
+   ```
+   OR modify the script to skip cars already in DB using `INSERT OR IGNORE` + checking `existing` set. The script already uses `INSERT OR IGNORE` on laps, but the main loop needs to track `existing` cars and skip re-inserting them.
+
+   **Important**: The single-pass approach (scan all 633 pages once) is the only approach that won't time out. Two previous attempts timed out because they scanned the PDF multiple times. The script must do ONE pass through all pages, tracking current_car and only writing when current_car is in the missing set.
+
+   **The working script logic** (from the session — use this as template):
+   ```python
+   RACE_START_UTC = datetime(2026, 5, 16, 12, 59, 55, 626000, tzinfo=timezone.utc)
+   # Load existing cars from DB first
+   existing = set(r[0] for r in cur.execute("SELECT car_no FROM cars WHERE class='SP9'").fetchall())
+   current_car = None
+   car_cumulative = {}
+   # Single pass through all pages:
+   for pg_no, page in enumerate(pdf.pages, 1):
+       for line in page.extract_text().splitlines():
+           if any_header.match(line):
+               m = header_re.match(line)
+               if m:
+                   car_no = int(m.group(1))
+                   if car_no not in existing:
+                       # try to match model
+                       # set current_car if GT3
+                   else:
+                       current_car = None  # skip already-extracted cars
+           elif current_car and lap_re.match(line):
+               # extract lap, compute timestamp, insert
+   ```
+
+3. **Run consistency check**:
+   ```bash
+   python3 scripts/check_class_consistency.py SP9
+   ```
+   Expected: 42 cars, ~6000 laps, ~450 stints. PASS on all 5 checks.
+
+4. **Regenerate SP9 JSON** (all 5 files):
+   ```bash
+   python3 dashboard/src/data/sp9/stints.json.py      > dashboard/src/data/sp9/stints.json
+   python3 dashboard/src/data/sp9/ranking.json.py     > dashboard/src/data/sp9/ranking.json
+   python3 dashboard/src/data/sp9/corrections.json.py > dashboard/src/data/sp9/corrections.json
+   python3 dashboard/src/data/sp9/all_laps.json.py    > dashboard/src/data/sp9/all_laps.json
+   python3 dashboard/src/data/sp9/sectors.json.py     > dashboard/src/data/sp9/sectors.json
+   ```
+
+5. **Fix SP9 colour palette** in `dashboard/src/sp9/overview.md`, `stint-rankings.md`, `sector-analysis.md`:
+   The current `CAR_COLORS` only has 26 entries. With 42 cars, need to regenerate:
+   ```python
+   # 42 distinct colours via HSL interpolation
+   import colorsys
+   cars = [list of 42 car numbers from DB]
+   for i, car in enumerate(cars):
+       hue = i / len(cars)
+       r, g, b = colorsys.hls_to_rgb(hue, 0.65, 0.85)
+       print(f"  {car}: \"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}\",")
+   ```
+
+6. **Build and push**:
+   ```bash
+   cd dashboard && npm run build
+   # check 12 pages build clean
+   git add -A && git commit -m "feat(sp9): add 16 missing SP9 cars (Porsche GT3 R + Ford Mustang GT3)"
+   git push
+   ```
+
+### Pitfall discovered
+- The PDF full-scan (633 pages) takes ~8-10 min in Python with pdfplumber — only do ONE pass
+- The script must NOT scan for one car at a time (13 separate scans = timeout)
+- `INSERT OR IGNORE` is safe — idempotent, won't duplicate existing cars/laps
+
+### DB state at handoff
+- **Clean** — no partial writes, safe to start fresh
+- 26 SP9 cars, 2473 laps, 224 stints (pre-fix state)
+- M240i fully intact (11 cars, 1147 laps, 132 stints)
