@@ -90,3 +90,27 @@ Public web dashboard analysing BMW M240i Racing Cup performance at the **54th AD
 - `m240i_sector_times.db` — SQLite source of truth (gitignored)
 - `.github/workflows/deploy.yml` — single dashboard build + Pages deploy
 - `.opencode/skills/` — local design/data/stats skills
+
+---
+
+## SP9 expansion — Phase 1 findings
+
+### PDF inspection (read-only, confirmed go)
+- **26 SP9/GT3 cars** detected in `42_24h_Race_Sector_Times.pdf`
+- Models: BMW M4 GT3 EVO, Mercedes-AMG GT3, Audi R8 LMS GT3, Ferrari 296 GT3,
+  Lamborghini Huracan GT3 EVO2, Aston Martin Vantage AMR GT3, McLaren 720S-GT3, Porsche 911 GT3 CUP MR
+- Row format **identical to M240i**: `lap_no driver_no laptime [sector speed]×8 [sector9]`
+- Car numbers: 1, 3, 7, 8, 11, 16, 19, 26, 32, 33, 34, 35, 37, 39, 45, 47, 69, 71, 75, 77, 80, 84, 99, 130, 786, 992
+- 26 < 35 escalation threshold — **no escalation needed**
+
+### LiveTiming finding (session archived, workaround confirmed)
+- LiveTiming WebSocket now returns only `LTS_TIMESYNC` for all cars — the race ended
+  May 17 and archived sessions no longer stream `DATA` frames
+- **Workaround**: timestamp reconstruction from PDF lap times is **exact**
+  - Ground truth: `race_start_utc = 2026-05-16 12:59:55.626` (verified across 5 M240i cars, 0.0s variance)
+  - `lap_day_time_utc = race_start_utc + sum(all previous lap durations for that car)`
+  - This is how LiveTiming computed timestamps anyway — no approximation
+- Result: SP9 timestamps will be reconstructed from PDF, same quality as M240i LiveTiming data
+
+### Go/No-go
+**GO** — proceed to Phase 2.
