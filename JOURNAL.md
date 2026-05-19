@@ -103,3 +103,29 @@ Simple 24hrs app/
 ├── STATUS.md                       # Current state snapshot
 └── JOURNAL.md                      # This file
 ```
+
+## Session N+1 — SP9 (GT3) expansion — Phases 0 to 6
+
+### What was built
+Full expansion of the dashboard to cover the SP9 GT3 class alongside M240i.
+
+### Key technical decisions and discoveries
+
+**Phase 0**: Updated `stint-ranking` and `sqlite-queries` skills to fix the obsolete 1200s threshold and add all 8 methodology invariants.
+
+**Phase 1**: 26 SP9 cars found in PDF, same row format as M240i. LiveTiming WS session expired post-race — DATA frames no longer served. **Workaround**: cumulative lap time reconstruction exact to 0.0s variance against M240i LiveTiming ground truth. Race start: `2026-05-16 12:59:55.626 UTC`.
+
+**Phase 2**: Renamed DB to `nbr_sector_times.db`, added `class TEXT DEFAULT 'M240i'` column to all tables, recreated views as `stint_ranking_m240i` and `stint_ranking_sp9`.
+
+**Phase 3**: Extracted 26 SP9 cars, 2473 laps, 224 stints from PDF. Timestamps reconstructed. Sector times re-parsed from raw lines (98% S1-S8, 84% S9 — same truncation as M240i). Consistency check: PASS all 5.
+
+**Phase 4**: Per-class JSON loaders in `data/m240i/` and `data/sp9/`. CLASS variable was `M240I` (wrong case) due to `tr '[:lower:]' '[:upper:]'` — fixed to `M240i`.
+
+**Phase 5**: Landing page + 8 sub-pages. SP9 car palette: 26 colours via HSL interpolation. Built 12 pages, zero errors.
+
+**Phase 6**: Deploy + doc update.
+
+### Pitfalls discovered
+- `tr '[:lower:]' '[:upper:]'` converts `m240i` to `M240I` but DB has `M240i` — always hardcode class strings
+- LiveTiming sessions are ephemeral — only stream DATA during active race. No archival endpoint.
+- Cumulative lap time reconstruction works perfectly for closed-event data (no SC gaps matter here because the timestamps include all laps, SC or not)
