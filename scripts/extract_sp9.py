@@ -18,9 +18,15 @@ RACE_START_UTC = datetime(2026, 5, 16, 12, 59, 55, 626000, tzinfo=timezone.utc)
 CEST = timedelta(hours=2)
 
 # Regex patterns
+# Model is anchored to a known car make so the driver list (which may contain
+# spaces around "/") is captured in full instead of being truncated to the
+# last driver before the model. The character class allows parentheses so
+# variants like "Porsche 911 GT3 R (992) Evo26" and "Ford Mustang GT3 EVO (2026)"
+# match. Carrera Cup cars ("GT3 Cup" with lowercase 'C') are excluded post-match
+# in the main loop — they belong to a different class, not SP9.
+MAKES = r'(?:BMW|Porsche|Mercedes-AMG|Audi|Ferrari|Lamborghini|Aston Martin|McLaren|Ford)'
 SP9_HEADER_RE = re.compile(
-    r'^(\d+)\s+(.+?)\s+([\w\s\-\.]+GT3[\w\s\-\.]*)\s+theoretical besttime:\s+(.+)$',
-    re.IGNORECASE
+    r'^(\d+)\s+(.+?)\s+(' + MAKES + r'[\w\s\-\.()]*GT3[\w\s\-\.()]*)\s+theoretical besttime:\s+(.+)$'
 )
 ANY_HEADER_RE = re.compile(r'^(\d+)\s+.+\s+theoretical besttime:\s+.+$')
 LAP_RE = re.compile(r'^(\d+)\s+(\d+)\s+([0-9:]+\.\d+)\s*(.*)$')
@@ -83,32 +89,36 @@ with pdfplumber.open(str(PDF)) as pdf:
             line = line.strip()
             if not line: continue
 
-            # Detect SP9 car header
-            m = SP9_HEADER_RE.match(line)
-            if m and 'GT4' not in m.group(3).upper():
-                car_no = int(m.group(1))
-                drivers = m.group(2).strip()
-                model = m.group(3).strip()
-                best = m.group(4).strip()
-                current_car = car_no
-                current_drivers = drivers
-                current_model = model
-                current_best = best
-                current_page = page_no
+            # Header line: decide whether this is a valid SP9 car or another class.
+            # ANY header line resets the parser's car context — if the new header is
+            # SP9, current_car is set; otherwise it's cleared so following lap rows
+            # are not misattributed (this was the bug that caused Cup-car laps to be
+            # written under car #911 after page 537).
+            if ANY_HEADER_RE.match(line):
+                m = SP9_HEADER_RE.match(line)
+                # Valid SP9 = matches make-anchored regex AND not GT4 AND not "GT3 Cup"
+                # (Carrera Cup uses lower-case 'Cup'; "GT3 CUP MR" with all-caps is a
+                # Manthey SP9 entry that we keep — car #992).
+                is_sp9 = bool(m) and 'GT4' not in m.group(3).upper() and 'GT3 Cup' not in m.group(3)
+                if is_sp9:
+                    car_no = int(m.group(1))
+                    drivers = m.group(2).strip()
+                    model = m.group(3).strip()
+                    best = m.group(4).strip()
+                    current_car = car_no
+                    current_drivers = drivers
+                    current_model = model
+                    current_best = best
+                    current_page = page_no
 
-                # Insert car if not exists
-                existing = cur.execute("SELECT car_no FROM cars WHERE car_no=? AND class='SP9'", (car_no,)).fetchone()
-                if not existing:
-                    cur.execute('''
-                        INSERT INTO cars (car_no, drivers, model, theoretical_best, source_page, class)
-                        VALUES (?,?,?,?,?,?)
-                    ''', (car_no, drivers, model, best, page_no, 'SP9'))
-                    cars_inserted += 1
-                continue
-
-            # Detect non-SP9 car header (reset current car)
-            if ANY_HEADER_RE.match(line) and not (SP9_HEADER_RE.match(line) and 'GT4' not in line.upper()):
-                if not (SP9_HEADER_RE.match(line) and 'GT4' not in line.upper()):
+                    existing = cur.execute("SELECT car_no FROM cars WHERE car_no=? AND class='SP9'", (car_no,)).fetchone()
+                    if not existing:
+                        cur.execute('''
+                            INSERT INTO cars (car_no, drivers, model, theoretical_best, source_page, class)
+                            VALUES (?,?,?,?,?,?)
+                        ''', (car_no, drivers, model, best, page_no, 'SP9'))
+                        cars_inserted += 1
+                else:
                     current_car = None
                 continue
 

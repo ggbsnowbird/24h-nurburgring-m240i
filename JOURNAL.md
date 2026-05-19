@@ -231,3 +231,70 @@ Full expansion of the dashboard to cover the SP9 GT3 class alongside M240i.
 - **Clean** — no partial writes, safe to start fresh
 - 26 SP9 cars, 2473 laps, 224 stints (pre-fix state)
 - M240i fully intact (11 cars, 1147 laps, 132 stints)
+
+## Session N+3 — 16 missing SP9 cars added (real root cause was the regex, not a MODELS list)
+
+### Diagnosis (the previous handoff was wrong about the cause)
+The previous session attributed the miss to an incomplete hardcoded `MODELS` list, but `scripts/extract_sp9.py` was already using a generic regex. The actual root cause was a **character-class gap**:
+
+```python
+# Before
+r'^(\d+)\s+(.+?)\s+([\w\s\-\.]+GT3[\w\s\-\.]*)\s+theoretical besttime:\s+(.+)$'
+```
+
+The model character class `[\w\s\-\.]` excluded `(` and `)`. The 16 missing cars all carry parenthesised generation tags in their model string:
+- `Porsche 911 GT3 R (992) Evo26` (13 cars)
+- `Ford Mustang GT3 EVO (2026)` (3 cars)
+
+So the regex silently failed on every line where the model contained `(`.
+
+### Fix
+1. **Anchor model on a known make** so the non-greedy `(.+?)` driver group can't truncate prematurely:
+```python
+MAKES = r'(?:BMW|Porsche|Mercedes-AMG|Audi|Ferrari|Lamborghini|Aston Martin|McLaren|Ford)'
+SP9_HEADER_RE = re.compile(
+    r'^(\d+)\s+(.+?)\s+(' + MAKES + r'[\w\s\-\.()]*GT3[\w\s\-\.()]*)\s+theoretical besttime:\s+(.+)$'
+)
+```
+Adding `()` to the char class is necessary to catch the parens. Anchoring on a make is necessary to capture the full drivers list — the previous non-anchored regex truncated drivers because the engine picked the shortest non-greedy match.
+
+2. **Exclude Carrera Cup, keep #992 Manthey**. The broader regex now also matches `Porsche 911 GT3 Cup (992)` (14 separate Cup cars across the PDF — they run in class CUP, not SP9). Filter them out with a case-sensitive check; `'GT3 CUP MR'` (all-caps, #992) is the legitimate Manthey SP9 entry, so distinguish on case:
+```python
+is_sp9 = bool(m) and 'GT4' not in m.group(3).upper() and 'GT3 Cup' not in m.group(3)
+```
+
+3. **Reset `current_car` on every non-SP9 header**. The previous branch only reset when `SP9_HEADER_RE` didn't match. Since Cup headers now match `SP9_HEADER_RE` (and then get rejected by the Cup filter), the old reset branch left `current_car` pointing at the previous SP9 car, and Cup-car lap rows got attributed to it. The new flow:
+```python
+if ANY_HEADER_RE.match(line):
+    if is_sp9:
+        # set current_car, insert if new
+    else:
+        current_car = None
+    continue
+```
+
+### What was caught when I forgot the reset
+First re-run (after only fixing the char class) inserted 30 cars and 3694 laps. Car #911 alone got 426 laps with driver_no values cycling through 1,1,1,2 four times per lap — the laps of every Cup car after page 537 were being written under #911. Spotted via `SELECT car_no, COUNT(*) FROM stints WHERE class='SP9' GROUP BY car_no ORDER BY 2 DESC`. After wiping SP9 cleanly and applying the reset fix, the second run produced the expected 42 cars / 4369 laps / 379 stints.
+
+### Result
+| Class | cars | laps | stints |
+|---|---:|---:|---:|
+| M240i | 11 | 1147 | 132 |
+| SP9   | **42** | **4369** | **379** |
+
+`scripts/check_class_consistency.py SP9` → PASS all 5.
+`npm run build` → clean 12 pages.
+
+### Side effects
+- `dashboard/src/data/sp9/sectors.json` grew from 17.8 MB to 53 MB (cubic-ish growth with car count via cross-stint comparison windows). Still under GitHub Pages' 100 MB file limit; left as-is.
+- `dashboard/src/data/sp9/ranking.json` grew from a few MB to 6.3 MB. Acceptable.
+- 42-colour palette regenerated via `colorsys.hls_to_rgb(i/42, 0.65, 0.85)` and propagated to all three SP9 pages.
+
+### Pre-existing issue noted (not fixed)
+`check_class_consistency.py M240i` reports `Check 1: 5 stints have best_laptime_sec >= 690s`. This was already true before this session — the SP9 extractor never touches M240i stints. Most likely Code-60 / Safety-Car periods where every lap of a stint was slow. Out of scope here.
+
+### Pitfalls discovered (carry these into future PDF parsing work)
+- **Parens in models break naive char classes.** Always include `()` when the right side of a non-greedy match contains real product names — Porsche, Ford, etc. love bracketed homologation tags.
+- **Anchor model regex on a known make** rather than letting a generic char class consume drivers. A non-greedy `.+?` is happy to land the model boundary one word inside the drivers list if the make is unconstrained.
+- **`ANY_HEADER_RE` must reset `current_car`** regardless of whether the new header matches the target class. Otherwise rejected-class laps silently get attributed to the previous accepted car.
+- **GLOB vs LIKE on SQLite.** `LIKE '%Cup%'` is case-insensitive and would clobber the legit `#992` "CUP MR" entry; `GLOB '*Cup*'` is case-sensitive — use it when distinguishing on letter case.

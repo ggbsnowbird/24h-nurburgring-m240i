@@ -11,56 +11,24 @@ Public web dashboard analysing BMW M240i Racing Cup and SP9 GT3 performance at t
 
 ## Current state
 
-### ✅ DONE — M240i fully complete
-### 🔴 IN PROGRESS — SP9 has 16 missing cars (see open issue below)
+### ✅ DONE — both classes complete with full grid
 
 ### Database (`nbr_sector_times.db`)
-| Table / View | Rows M240i | Rows SP9 (current) | Rows SP9 (target) |
-|---|---:|---:|---:|
-| `cars` | 11 | **26** | **42** |
-| `laps` | 1147 | **2473** | **~6000+** |
-| `live_timing_laps` | 1147 | **2473** | **~6000+** |
-| `stints` | 132 | **224** | **~450+** |
+| Table / View | Rows M240i | Rows SP9 |
+|---|---:|---:|
+| `cars` | 11 | **42** |
+| `laps` | 1147 | **4369** |
+| `live_timing_laps` | 1147 | **4369** |
+| `stints` | 132 | **379** |
 
-### 🔴 OPEN ISSUE — 16 SP9 cars missing from DB
-
-**Root cause**: `scripts/extract_sp9.py` had an incomplete `MODELS` list. It was missing `Porsche 911 GT3 R` (13 cars) and `Ford Mustang GT3` (3 cars). The full scan confirmed **42 GT3 cars in PDF**, but only 26 were extracted.
-
-**Missing cars** (confirmed by full PDF scan):
-```
-#4   Goroyan/Kvitka/Berthon/Fontana         Porsche 911 GT3 R
-#5   Kaya/Kiefer/Piana/Stursberg             Porsche 911 GT3 R
-#17  Andlauer/Boccolacci/Menzel/Picariello   Porsche 911 GT3 R  ← DNS early, ~1am
-#18  Tilley/Hill/Kolb/Hofer                 Porsche 911 GT3 R
-#24  Heinrich/Vanthoor/Feller               Porsche 911 GT3 R
-#30  Kim/Bruins/Cho/Seefried                Porsche 911 GT3 R
-#44  Bachler/Heinemann/Müller/Schuring       Porsche 911 GT3 R
-#48  Arrow/Assenheimer/Müller/Pereira        Porsche 911 GT3 R
-#54  Buus/Christensen/Sturm/Hartog           Porsche 911 GT3 R
-#55  Beretta/Ghiretti/Sturm/Hartog           Porsche 911 GT3 R
-#64  Maini/Scherer/Schumacher/Stippler       Ford Mustang GT3
-#65  Haupt/Kolb/Schumacher/Caresani          Ford Mustang GT3
-#67  Olsen/Mies/Vervisch/Stippler            Ford Mustang GT3
-#86  Li/Fjordbach/Ye/King                   Porsche 911 GT3 R
-#123 Rump/Bünnagel/Brundle                  Porsche 911 GT3 R
-#911 Estre/Güven/Preining/Campbell           Porsche 911 GT3 R  ← "Grello" Manthey
-```
-
-**DB state is clean** — both extraction attempts were aborted before any commit, so no partial writes exist. DB is safe to re-run.
-
-**What next agent needs to do** (see JOURNAL.md for exact script):
-1. Add `'Porsche 911 GT3 R'` and `'Ford Mustang GT3'` to the MODELS list in `scripts/extract_sp9.py`
-2. Re-run the extraction **only for missing cars** (skip existing 26 — use `INSERT OR IGNORE`)
-3. Run `python3 scripts/check_class_consistency.py SP9`
-4. Regenerate all 5 SP9 JSON files
-5. Fix the colour palette in `dashboard/src/sp9/` pages (currently 26 colours, need 42)
-6. Build + push
+### SP9 grid (42 GT3 cars)
+13 × Porsche 911 GT3 R (#4, #5, #17, #18, #24, #30, #44, #48, #54, #55, #86, #123, #911 — Manthey "Grello") and 3 × Ford Mustang GT3 (#64, #65, #67) were added in the latest session, on top of the original 26 (BMW M4 GT3 EVO, Mercedes-AMG GT3, Audi R8 LMS GT3, Ferrari 296 GT3, Lamborghini Huracan GT3 EVO2, Aston Martin Vantage AMR GT3, McLaren 720S-GT3, Porsche 911 GT3 CUP MR).
 
 ### SP9 timestamp source
 Race LiveTiming session expired. Timestamps reconstructed from cumulative PDF lap times using `race_start_utc = 2026-05-16T12:59:55.626Z` — verified 0.0s variance against M240i ground truth.
 
-### Driver name correction (this session)
-All 26 existing SP9 cars had truncated driver strings (trailing `/`). Fixed by re-parsing with model-aware splitting. 119 stints corrected. Note: **car #17 Boccolacci** (two c's — not "Bocolacci") — he DNF'd around 1am with his Porsche 911 GT3 R.
+### Known minor issue (pre-existing, not blocking)
+`check_class_consistency.py M240i` reports 5 stints with `best_laptime_sec >= 690s`. This predates the current session — extraction touches SP9 only. Likely Code-60 / Safety-Car stints where every lap was slow. Out of scope for the SP9 work.
 
 ---
 
@@ -93,9 +61,9 @@ All 26 existing SP9 cars had truncated driver strings (trailing `/`). Fixed by r
 ```
 nbr_sector_times.db                  SQLite DB (gitignored)
 dashboard/src/data/m240i/            M240i JSON + loaders (complete)
-dashboard/src/data/sp9/              SP9 JSON + loaders (need regen after fix)
-dashboard/src/sp9/                   SP9 dashboard pages (need colour palette fix)
-scripts/extract_sp9.py               SP9 extraction — NEEDS MODELS LIST FIX
+dashboard/src/data/sp9/              SP9 JSON + loaders (42-car grid)
+dashboard/src/sp9/                   SP9 dashboard pages (42-colour palette)
+scripts/extract_sp9.py               SP9 extraction (make-anchored regex, Cup excluded)
 scripts/check_class_consistency.py   DB validation script
 PLAN-GT3-EXPANSION.md                Original SP9 plan
 ```
