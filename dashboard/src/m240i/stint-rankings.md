@@ -41,7 +41,7 @@ corrections.length > 0 ? html`<div class="correction-log">
     <span>${c.reason}</span>
     <span class="meta">Laps ${c.original_lap_start}–${c.original_lap_end} → <strong>${c.corrected_lap_start}–${c.corrected_lap_end}</strong> · ${c.corrected_at.slice(0,10)}</span>
   </div>`)}
-</div>` : html``
+</div>` : ""
 ```
 
 <div class="control-bar">
