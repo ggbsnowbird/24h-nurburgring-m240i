@@ -26,7 +26,7 @@ export default {
   head: `<script>
 (function(){
   var p=location.pathname;
-  var base=p.match(/^(\/[^/]+\/)/)?.[1]||'/';
+  var base=p.match(new RegExp('^(/[^/]+/)'))?.[1]||'/';
   var loginPath=base+'login';
   if(!p.startsWith(loginPath)&&!localStorage.getItem('nbr_team')){
     location.replace(loginPath);return;
