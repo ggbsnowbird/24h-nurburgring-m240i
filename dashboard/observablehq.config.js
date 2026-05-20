@@ -26,11 +26,13 @@ export default {
   head: `<script>
 (function(){
   var p=location.pathname;
-  if(!p.startsWith('/login')&&!localStorage.getItem('nbr_team')){
-    location.replace('/login');return;
+  var base=p.match(/^(\/[^/]+\/)/)?.[1]||'/';
+  var loginPath=base+'login';
+  if(!p.startsWith(loginPath)&&!localStorage.getItem('nbr_team')){
+    location.replace(loginPath);return;
   }
   document.addEventListener('DOMContentLoaded',function(){
-    if(p.startsWith('/login'))return;
+    if(p.startsWith(loginPath))return;
     var t=localStorage.getItem('nbr_team');
     if(!t)return;
     var h=document.querySelector('#observablehq-header > div');
@@ -41,7 +43,7 @@ export default {
     var btn=document.createElement('button');
     btn.textContent='Logout';
     btn.style.cssText='padding:2px 7px;cursor:pointer;border:1px solid currentColor;border-radius:3px;background:transparent;font-size:.85em;font-family:inherit';
-    btn.onclick=function(){localStorage.removeItem('nbr_team');document.cookie='nbr_team=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=Lax';location.replace('/login');};
+    btn.onclick=function(){localStorage.removeItem('nbr_team');document.cookie='nbr_team=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=Lax';location.replace(loginPath);};
     b.appendChild(btn);h.appendChild(b);
   });
 })();

@@ -70,7 +70,8 @@ form.addEventListener("submit", async (e) => {
         body: JSON.stringify({ team: teamName, ts: Date.now(), ua: navigator.userAgent }),
       }).catch(() => {});
     }
-    location.replace("/");
+    const basePath = location.pathname.match(/^(\/[^/]+\/)/)?.[1] || '/';
+    location.replace(basePath);
   } else {
     errorEl.style.display = "block";
     passwordInput.value = "";
