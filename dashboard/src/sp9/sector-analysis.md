@@ -163,20 +163,13 @@ html`<div class="stint-meta">
 const refSectorRows = stintSectors.filter(r =>
   r.comp_car_no === refCar && (refDriver === "All drivers" || r.comp_driver === refDriver)
 );
-const refByDelta = [...refSectorRows].sort((a,b) => a.delta_to_best - b.delta_to_best);
-const bestSec  = refByDelta[0];
-const worstSec = refByDelta[refByDelta.length - 1];
+const sectorsInTop3 = refSectorRows.filter(r => r.rank <= 3).length;
 const avgSecRank = d3.mean(refSectorRows, r => r.rank);
-display(html`<div class="stat-row">
+display(html`<div class="stat-row" style="grid-template-columns:repeat(2,1fr)">
   <div class="stat-card">
-    <div class="label">Best sector</div>
-    <div class="value">${bestSec ? `S${bestSec.sector}` : "—"}</div>
-    <div class="sub">${bestSec ? `P${bestSec.rank}/${bestSec.n_drivers} · +${bestSec.delta_to_best.toFixed(2)}s` : ""}</div>
-  </div>
-  <div class="stat-card">
-    <div class="label">Worst sector</div>
-    <div class="value">${worstSec ? `S${worstSec.sector}` : "—"}</div>
-    <div class="sub">${worstSec ? `P${worstSec.rank}/${worstSec.n_drivers} · +${worstSec.delta_to_best.toFixed(2)}s` : ""}</div>
+    <div class="label">Number of sectors in Top3</div>
+    <div class="value">${sectorsInTop3}</div>
+    <div class="sub">out of ${refSectorRows.length} sector${refSectorRows.length>1?"s":""}</div>
   </div>
   <div class="stat-card">
     <div class="label">Avg sector rank</div>

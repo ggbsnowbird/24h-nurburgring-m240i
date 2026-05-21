@@ -146,7 +146,7 @@ display(html`<div class="stat-row">
     <div class="sub">out of ${maxRank} drivers (avg)</div>
   </div>
   <div class="stat-card">
-    <div class="label">Top-3 stints</div>
+    <div class="label">Number of stints in Top3</div>
     <div class="value">${heroPodiums}</div>
     <div class="sub">${selfRows.length ? Math.round(100*heroPodiums/selfRows.length) : 0}% of ranked stints</div>
   </div>
