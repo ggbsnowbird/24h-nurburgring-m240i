@@ -30,14 +30,6 @@ jobs:
         run: npm ci
         working-directory: dashboard
 
-      - name: Generate credentials page
-        if: ${{ env.TEAMS_CREDENTIALS_CSV != '' }}
-        run: |
-          echo "$TEAMS_CREDENTIALS_CSV" > teams_credentials.csv
-          python3 tools/generate_credentials_page.py
-        env:
-          TEAMS_CREDENTIALS_CSV: ${{ secrets.TEAMS_CREDENTIALS_CSV }}
-
       - name: Build dashboard
         run: npm run build
         working-directory: dashboard
