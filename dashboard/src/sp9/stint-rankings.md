@@ -68,7 +68,7 @@ function fmtSec(s) {
 <div class="info-box">
   Outlap (first lap of each stint) excluded — cold tyres / pit exit.<br>
   Laps &gt; 11:30 (690s) excluded — driver swap / Safety Car / Code 60.<br>
-  Each driver is ranked against all M240i cars on track in the <strong>same time window</strong>.<br>
+  Each driver is ranked against all SP9 / GT3 cars on track in the <strong>same time window</strong>.<br>
   Window extended 4 min before stint start to include drivers finishing a lap just before.
 </div>
 

@@ -85,7 +85,6 @@ This is the tool to use to pinpoint specific areas for improvement.
 
 - All timestamps in **CEST (UTC+2)** — Nürburgring local time
 - Sector 7 (Nordschleife, ~3:30–4:00 min) handled correctly with a dynamic per-sector threshold
-- Manual corrections logged for specific stints (e.g. Boutonnet stint 14 — puncture, laps 93–96 excluded)
 
 ---
 
