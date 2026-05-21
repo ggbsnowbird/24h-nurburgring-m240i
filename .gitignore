@@ -1,4 +1,5 @@
 teams_credentials.csv
+dashboard/src/credentials.md
 dashboard/node_modules/
 dashboard/src/.observablehq/cache/
 dashboard/dist/
