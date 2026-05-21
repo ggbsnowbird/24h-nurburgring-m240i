@@ -115,6 +115,64 @@ export default {
 
   .chart-subtitle { font-size: .82em; opacity: .55; margin: -.1rem 0 .8rem; }
 
+  /* ─── Page hero (icon + pitch) ─────────────────────── */
+  .page-hero {
+    margin: 1rem 0 1.25rem;
+    padding-bottom: .9rem;
+    border-bottom: 1px solid var(--theme-foreground-faintest);
+  }
+  .page-hero h1 {
+    font-size: 1.7em; font-weight: 800; margin: 0 0 .3rem;
+    letter-spacing: .3px;
+    display: flex; align-items: center; gap: .65rem;
+    border: none; padding-bottom: 0;
+  }
+  .page-hero h1 .icon { font-size: 1.05em; opacity: .95; line-height: 1; }
+  .page-pitch {
+    font-size: .94em; opacity: .58; margin: 0; font-weight: 400;
+  }
+
+  /* ─── Hero stat row ────────────────────────────────── */
+  .stat-row {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: .8rem; margin: 1rem 0 1.4rem;
+  }
+  .stat-card {
+    background: var(--theme-background-alt);
+    border-left: 3px solid var(--nbr-green);
+    border-radius: 6px; padding: .65rem .9rem;
+  }
+  .stat-card .label {
+    font-size: .68em; text-transform: uppercase;
+    letter-spacing: .9px; opacity: .55; font-weight: 700;
+    margin-bottom: .2rem;
+  }
+  .stat-card .value {
+    font-size: 1.35em; font-weight: 700;
+    font-feature-settings: "tnum";
+    color: var(--nbr-gold);
+    font-family: var(--nbr-mono);
+    line-height: 1.15;
+  }
+  .stat-card .sub { font-size: .74em; opacity: .5; margin-top: .15rem; }
+
+  /* ─── Collapsible methodology ──────────────────────── */
+  details.methodology { margin: .8rem 0 1rem; }
+  details.methodology summary {
+    cursor: pointer; font-size: .82em; opacity: .55;
+    padding: .3rem 0; user-select: none;
+    list-style: none;
+  }
+  details.methodology summary::-webkit-details-marker { display: none; }
+  details.methodology summary::before {
+    content: "▸"; display: inline-block; margin-right: .4rem;
+    transition: transform .15s; font-size: .8em;
+  }
+  details.methodology[open] summary::before { transform: rotate(90deg); }
+  details.methodology summary:hover { opacity: .85; }
+  details.methodology[open] summary { opacity: .75; margin-bottom: .3rem; }
+  details.methodology .info-box { margin-top: 0; }
+
   /* ─── Control bar ──────────────────────────────────── */
   .control-bar {
     display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;
@@ -190,6 +248,10 @@ export default {
     .control-bar { gap: .6rem; padding: .6rem .7rem; }
     .observablehq h1 { font-size: 1.4em; }
     .observablehq h2 { font-size: 1.15em; margin: 1.4rem 0 .4rem; }
+    .page-hero h1 { font-size: 1.35em; }
+    .page-pitch { font-size: .88em; }
+    .stat-row { grid-template-columns: 1fr; gap: .5rem; margin: .8rem 0 1.1rem; }
+    .stat-card .value { font-size: 1.2em; }
   }
 
   /* ─── Sidebar toggle (hamburger contrasté) ─────────── */

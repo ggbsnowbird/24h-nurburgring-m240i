@@ -24,14 +24,20 @@ function fmtSec(s) {
 }
 ```
 
-# Stint Rankings
+<div class="page-hero">
+  <h1><span class="icon">🏁</span> How I rank vs the field</h1>
+  <p class="page-pitch">Best lap & average pace, compared to every M240i driver on track in the same time window.</p>
+</div>
 
+<details class="methodology">
+<summary>How is this computed?</summary>
 <div class="info-box">
   Outlap (first lap of each stint) excluded — cold tyres / pit exit.<br>
   Laps &gt; 11:30 (690s) excluded — driver swap / Safety Car / Code 60.<br>
   Each driver is ranked against all M240i cars on track in the <strong>same time window</strong>.<br>
   Window extended 4 min before stint start to include drivers finishing a lap just before.
 </div>
+</details>
 
 ```js
 corrections.length > 0 ? html`<div class="correction-log">
@@ -83,6 +89,29 @@ const selfRows = filteredRanking.filter(r =>
 );
 
 const maxRank = d3.max(filteredRanking, r => r.rank_by_best) ?? 15;
+```
+
+```js
+const heroBest    = d3.min(selfRows, r => r.best_laptime_sec);
+const heroAvgRank = d3.mean(selfRows, r => r.rank_by_best);
+const heroPodiums = selfRows.filter(r => r.rank_by_best <= 3).length;
+display(html`<div class="stat-row">
+  <div class="stat-card">
+    <div class="label">Best lap in window</div>
+    <div class="value">${fmtSec(heroBest)}</div>
+    <div class="sub">across ${filteredStints.length} stint${filteredStints.length>1?"s":""}</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Avg class rank</div>
+    <div class="value">${heroAvgRank != null ? `P${heroAvgRank.toFixed(1)}` : "—"}</div>
+    <div class="sub">out of ${maxRank} drivers (avg)</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Top-3 stints</div>
+    <div class="value">${heroPodiums}</div>
+    <div class="sub">${selfRows.length ? Math.round(100*heroPodiums/selfRows.length) : 0}% of ranked stints</div>
+  </div>
+</div>`);
 ```
 
 ---

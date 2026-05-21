@@ -66,13 +66,19 @@ function fmtSec(s) {
 }
 ```
 
-# Sector Analysis
+<div class="page-hero">
+  <h1><span class="icon">📊</span> Where I gain or lose time</h1>
+  <p class="page-pitch">Per-sector deltas across the Nordschleife — pick a stint, see exactly which sectors cost time vs the fastest peer.</p>
+</div>
 
+<details class="methodology">
+<summary>How is this computed?</summary>
 <div class="info-box">
   For each stint, all drivers on track in the same time window are ranked by best sector time.<br>
   <strong>Window:</strong> 4 min before ref stint start → ref stint end. Outlap excluded. Laps &gt;11:30 filtered.<br>
   Reference driver/car highlighted in orange.
 </div>
+</details>
 
 ---
 
@@ -150,6 +156,34 @@ html`<div class="stint-meta">
   <span>${refStint?.day_time_start?.slice(11,16)}→${refStint?.day_time_end?.slice(11,16)} CEST</span>
   <span style="opacity:.5">${driverOrder.length} drivers · ${nSectors} sectors</span>
 </div>`
+```
+
+```js
+// Hero stats for the ref driver across all sectors of the selected stint
+const refSectorRows = stintSectors.filter(r =>
+  r.comp_car_no === refCar && (refDriver === "All drivers" || r.comp_driver === refDriver)
+);
+const refByDelta = [...refSectorRows].sort((a,b) => a.delta_to_best - b.delta_to_best);
+const bestSec  = refByDelta[0];
+const worstSec = refByDelta[refByDelta.length - 1];
+const avgSecRank = d3.mean(refSectorRows, r => r.rank);
+display(html`<div class="stat-row">
+  <div class="stat-card">
+    <div class="label">Best sector</div>
+    <div class="value">${bestSec ? `S${bestSec.sector}` : "—"}</div>
+    <div class="sub">${bestSec ? `P${bestSec.rank}/${bestSec.n_drivers} · +${bestSec.delta_to_best.toFixed(2)}s` : ""}</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Worst sector</div>
+    <div class="value">${worstSec ? `S${worstSec.sector}` : "—"}</div>
+    <div class="sub">${worstSec ? `P${worstSec.rank}/${worstSec.n_drivers} · +${worstSec.delta_to_best.toFixed(2)}s` : ""}</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Avg sector rank</div>
+    <div class="value">${avgSecRank != null ? `P${avgSecRank.toFixed(1)}` : "—"}</div>
+    <div class="sub">across ${refSectorRows.length} sector${refSectorRows.length>1?"s":""}</div>
+  </div>
+</div>`);
 ```
 
 ---
