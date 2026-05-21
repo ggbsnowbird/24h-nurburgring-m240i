@@ -30,6 +30,13 @@ jobs:
         run: npm ci
         working-directory: dashboard
 
+      - name: Inject Gist token
+        if: ${{ env.GIST_TOKEN != '' }}
+        run: |
+          sed -i "s/GIST_TOKEN = \"\"/GIST_TOKEN = \"$GIST_TOKEN\"/" dashboard/src/auth/gist-config.js
+        env:
+          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+
       - name: Build dashboard
         run: npm run build
         working-directory: dashboard

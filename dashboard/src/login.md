@@ -5,7 +5,24 @@ sidebar: false
 ---
 
 ```js
-import { AUTH_TABLE, WEBHOOK_URL } from "./auth/auth-table.js";
+import { AUTH_TABLE } from "./auth/auth-table.js";
+import { GIST_ID, GIST_TOKEN } from "./auth/gist-config.js";
+
+async function appendLogin(team) {
+  if (!GIST_TOKEN || !GIST_ID) return;
+  try {
+    const r    = await fetch(`https://api.github.com/gists/${GIST_ID}`,
+                   { headers: { Authorization: `Bearer ${GIST_TOKEN}` } });
+    const data = await r.json();
+    const cur  = JSON.parse(data.files["logins.json"].content || "[]");
+    cur.push({ ts: Date.now(), team, ua: navigator.userAgent.slice(0, 120) });
+    await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      method: "PATCH", keepalive: true,
+      headers: { Authorization: `Bearer ${GIST_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ files: { "logins.json": { content: JSON.stringify(cur) } } }),
+    });
+  } catch (_) {}
+}
 
 async function sha256hex(str) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
@@ -62,14 +79,7 @@ form.addEventListener("submit", async (e) => {
     localStorage.setItem("nbr_team", teamName);
     const exp = new Date(Date.now() + 30 * 86400 * 1000).toUTCString();
     document.cookie = `nbr_team=${encodeURIComponent(teamName)};expires=${exp};path=/;SameSite=Lax`;
-    if (WEBHOOK_URL) {
-      fetch(WEBHOOK_URL, {
-        method: "POST",
-        keepalive: true,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ team: teamName, ts: Date.now(), ua: navigator.userAgent }),
-      }).catch(() => {});
-    }
+    appendLogin(teamName);
     const basePath = location.pathname.match(/^(\/[^/]+\/)/)?.[1] || '/';
     location.replace(basePath);
   } else {
