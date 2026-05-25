@@ -29,6 +29,27 @@ function fmtSec(s) {
   <p class="page-pitch">Best lap & average pace, compared to every M240i driver on track in the same time window.</p>
 </div>
 
+```js
+html`<div class="landing-cards" style="margin:1rem 0 1.4rem">
+  <a href="./overview" style="text-decoration:none;color:inherit">
+    <div class="card" style="border-top:4px solid #00bcd4;cursor:pointer;padding:1.1rem 1.4rem;transition:transform .15s,box-shadow .15s"
+      onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 22px rgba(0,188,212,.22)'"
+      onmouseout="this.style.transform='';this.style.boxShadow=''">
+      <div style="font-size:1.1em;font-weight:800;margin-bottom:.3rem">🏎 Overview</div>
+      <p style="font-size:.85em;opacity:.6;margin:0">Class summary — cars, drivers, pace evolution.</p>
+    </div>
+  </a>
+  <a href="./sector-analysis" style="text-decoration:none;color:inherit">
+    <div class="card" style="border-top:4px solid var(--nbr-gold,#f0c040);cursor:pointer;padding:1.1rem 1.4rem;transition:transform .15s,box-shadow .15s"
+      onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 22px rgba(240,192,64,.22)'"
+      onmouseout="this.style.transform='';this.style.boxShadow=''">
+      <div style="font-size:1.1em;font-weight:800;margin-bottom:.3rem">📊 Sector Analysis</div>
+      <p style="font-size:.85em;opacity:.6;margin:0">Per-sector deltas — where time is gained or lost on the Nordschleife.</p>
+    </div>
+  </a>
+</div>`
+```
+
 <details class="methodology">
 <summary>How is this computed?</summary>
 <div class="info-box">

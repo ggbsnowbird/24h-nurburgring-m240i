@@ -32,6 +32,27 @@ function fmtSec(s) {
   <p class="page-pitch">Per-sector deltas across the Nordschleife — pick a stint, see exactly which sectors cost time vs the fastest peer.</p>
 </div>
 
+```js
+html`<div class="landing-cards" style="margin:1rem 0 1.4rem">
+  <a href="./overview" style="text-decoration:none;color:inherit">
+    <div class="card" style="border-top:4px solid #00bcd4;cursor:pointer;padding:1.1rem 1.4rem;transition:transform .15s,box-shadow .15s"
+      onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 22px rgba(0,188,212,.22)'"
+      onmouseout="this.style.transform='';this.style.boxShadow=''">
+      <div style="font-size:1.1em;font-weight:800;margin-bottom:.3rem">🏎 Overview</div>
+      <p style="font-size:.85em;opacity:.6;margin:0">Class summary — cars, drivers, pace evolution.</p>
+    </div>
+  </a>
+  <a href="./stint-rankings" style="text-decoration:none;color:inherit">
+    <div class="card" style="border-top:4px solid var(--nbr-green,#43632d);cursor:pointer;padding:1.1rem 1.4rem;transition:transform .15s,box-shadow .15s"
+      onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 22px rgba(67,99,45,.25)'"
+      onmouseout="this.style.transform='';this.style.boxShadow=''">
+      <div style="font-size:1.1em;font-weight:800;margin-bottom:.3rem">🏁 Stint Rankings</div>
+      <p style="font-size:.85em;opacity:.6;margin:0">Best lap & average pace ranked against drivers in the same time window.</p>
+    </div>
+  </a>
+</div>`
+```
+
 <details class="methodology">
 <summary>How is this computed?</summary>
 <div class="info-box">
