@@ -78,7 +78,8 @@ html`<div class="landing-cards" style="margin:1rem 0 1.4rem">
       onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 22px rgba(0,188,212,.22)'"
       onmouseout="this.style.transform='';this.style.boxShadow=''">
       <div style="font-size:1.1em;font-weight:800;margin-bottom:.3rem">🏎 Overview</div>
-      <p style="font-size:.85em;opacity:.6;margin:0">Class summary — cars, drivers, pace evolution.</p>
+      <p style="font-size:.85em;opacity:.6;margin:0 0 .7rem;line-height:1.5">Class summary — cars, drivers, pace evolution.</p>
+      <div style="font-size:.78em;color:#00bcd4;font-weight:700">Open analysis →</div>
     </div>
   </a>
   <a href="./stint-rankings" style="text-decoration:none;color:inherit">
@@ -86,7 +87,8 @@ html`<div class="landing-cards" style="margin:1rem 0 1.4rem">
       onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 22px rgba(67,99,45,.25)'"
       onmouseout="this.style.transform='';this.style.boxShadow=''">
       <div style="font-size:1.1em;font-weight:800;margin-bottom:.3rem">🏁 Stint Rankings</div>
-      <p style="font-size:.85em;opacity:.6;margin:0">Best lap & average pace ranked against drivers in the same time window.</p>
+      <p style="font-size:.85em;opacity:.6;margin:0 0 .7rem;line-height:1.5">Best lap & average pace ranked against drivers in the same time window.</p>
+      <div style="font-size:.78em;color:var(--nbr-green-light,#5a8438);font-weight:700">Open analysis →</div>
     </div>
   </a>
 </div>`
