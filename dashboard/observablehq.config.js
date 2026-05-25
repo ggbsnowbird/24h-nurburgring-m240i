@@ -265,6 +265,11 @@ export default {
     cursor: pointer !important;
     color: #fff !important;
     transition: background .15s !important;
+    z-index: 50 !important;
+  }
+  /* Mobile : réserver de la place dans le header pour le toggle */
+  @media (max-width: calc(640px + 6rem + 272px - 1px)) {
+    #observablehq-header > div { padding-left: 48px !important; }
   }
   #observablehq-sidebar-toggle:hover {
     background: rgba(67, 99, 45, 0.6) !important;
