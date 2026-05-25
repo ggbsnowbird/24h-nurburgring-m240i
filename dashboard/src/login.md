@@ -10,18 +10,30 @@ import { GIST_ID, GIST_TOKEN } from "./auth/gist-config.js";
 
 async function appendLogin(team) {
   if (!GIST_TOKEN || !GIST_ID) return;
-  try {
-    const r    = await fetch(`https://api.github.com/gists/${GIST_ID}`,
-                   { headers: { Authorization: `Bearer ${GIST_TOKEN}` } });
-    const data = await r.json();
-    const cur  = JSON.parse(data.files["logins.json"].content || "[]");
-    cur.push({ ts: Date.now(), team, ua: navigator.userAgent.slice(0, 120) });
-    await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-      method: "PATCH", keepalive: true,
-      headers: { Authorization: `Bearer ${GIST_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ files: { "logins.json": { content: JSON.stringify(cur) } } }),
-    });
-  } catch (_) {}
+  const url  = `https://api.github.com/gists/${GIST_ID}`;
+  const auth = { Authorization: `Bearer ${GIST_TOKEN}` };
+
+  // Up to 3 attempts — handles transient network errors AND lost-write races
+  // when two clients PATCH the gist within the same second.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const ctrl = new AbortController();
+      const tid  = setTimeout(() => ctrl.abort(), 4000);
+      const r    = await fetch(url, { headers: auth, signal: ctrl.signal });
+      const data = await r.json();
+      const cur  = JSON.parse(data.files["logins.json"].content || "[]");
+      cur.push({ ts: Date.now(), team, ua: navigator.userAgent.slice(0, 120) });
+      const res = await fetch(url, {
+        method:  "PATCH",
+        signal:  ctrl.signal,
+        headers: { ...auth, "Content-Type": "application/json" },
+        body:    JSON.stringify({ files: { "logins.json": { content: JSON.stringify(cur) } } }),
+      });
+      clearTimeout(tid);
+      if (res.ok) return;
+    } catch (_) { /* fallthrough → retry */ }
+    await new Promise(r => setTimeout(r, 250 + Math.random() * 350));
+  }
 }
 
 async function sha256hex(str) {
@@ -79,7 +91,9 @@ form.addEventListener("submit", async (e) => {
     localStorage.setItem("nbr_team", teamName);
     const exp = new Date(Date.now() + 30 * 86400 * 1000).toUTCString();
     document.cookie = `nbr_team=${encodeURIComponent(teamName)};expires=${exp};path=/;SameSite=Lax`;
-    appendLogin(teamName);
+    submitBtn.disabled    = true;
+    submitBtn.textContent = "Connexion…";
+    await appendLogin(teamName);
     const basePath = location.pathname.match(/^(\/[^/]+\/)/)?.[1] || '/';
     location.replace(basePath);
   } else {
