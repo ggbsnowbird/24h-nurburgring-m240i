@@ -320,16 +320,21 @@ Plot.plot({
 
 ```js
 html`<div class="table-scroll">${Inputs.table(stintRows.map(r => ({
-  "P": r.rank_by_best,
-  "Car": `#${r.comp_car_no}`,
-  "Driver": r.comp_driver,
-  "Best": fmtSec(r.best_laptime_sec),
-  "Avg": fmtSec(r.avg_laptime_sec),
-  "Gap vs P1": r.rank_by_best === 1 ? "—" : `+${((r.best_laptime_sec ?? 0) - p1Sec).toFixed(1)}s`,
-  "Laps": r.laps_in_window,
-  "Window": `${r.ref_window_start.slice(11,16)}→${r.ref_window_end.slice(11,16)}`
+  P: r.rank_by_best,
+  Car: `#${r.comp_car_no}`,
+  Driver: r.comp_driver,
+  Best: r.best_laptime_sec,
+  Avg: r.avg_laptime_sec,
+  "Gap vs P1": r.rank_by_best === 1 ? 0 : (r.best_laptime_sec ?? 0) - p1Sec,
+  Laps: r.laps_in_window,
+  Window: `${r.ref_window_start.slice(11,16)}→${r.ref_window_end.slice(11,16)}`
 })), {
   sort: "P",
+  format: {
+    Best: v => fmtSec(v),
+    Avg: v => fmtSec(v),
+    "Gap vs P1": v => v === 0 ? "—" : `+${v.toFixed(1)}s`
+  },
   width: { P: 42, Car: 52, Driver: 130, Best: 80, Avg: 80, "Gap vs P1": 90, Laps: 52, Window: 120 }
 })}</div>`
 ```

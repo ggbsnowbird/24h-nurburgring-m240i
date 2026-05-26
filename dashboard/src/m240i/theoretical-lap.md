@@ -235,13 +235,19 @@ Plot.plot({
 
 ```js
 html`<div class="table-scroll">${Inputs.table(driverRows.map(d => ({
-  "Driver":      d.label,
-  "Theoretical": fmtSec(d.theoretical),
-  "Actual best": fmtSec(d.actual),
-  "Gap":         `+${d.gap.toFixed(2)}s`,
-  ...Object.fromEntries(d.sectorBests.map((v, i) => [`S${i+1}`, v != null ? v.toFixed(2) : "—"]))
+  Driver:        d.label,
+  Theoretical:   d.theoretical,
+  "Actual best": d.actual,
+  Gap:           d.gap,
+  ...Object.fromEntries(d.sectorBests.map((v, i) => [`S${i+1}`, v]))
 })), {
   sort: "Theoretical",
+  format: {
+    Theoretical:   v => v != null ? fmtSec(v) : "—",
+    "Actual best": v => v != null ? fmtSec(v) : "—",
+    Gap:           v => v != null ? `+${v.toFixed(2)}s` : "—",
+    ...Object.fromEntries(SECT.map(s => [`S${s}`, v => v != null ? v.toFixed(2) : "—"]))
+  },
   width: {
     Driver: 150, Theoretical: 96, "Actual best": 96, Gap: 78,
     ...Object.fromEntries(SECT.map(s => [`S${s}`, 60]))

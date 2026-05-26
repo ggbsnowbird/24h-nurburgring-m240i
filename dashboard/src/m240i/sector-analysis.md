@@ -509,18 +509,20 @@ Plot.plot({
 ## Full sector table
 
 ```js
-// Pivot: one row per driver, one col per sector
+// Pivot: one row per driver, one col per sector. Numeric values stored
+// raw so column sort works (formatted to strings via `format`).
 const tableRows = driverSummary.map(d => {
   const row = {
-    "Driver": d.label,
-    "Avg rank": d.avgRank.toFixed(1),
-    "Σ delta": `+${d.sumDelta.toFixed(2)}s`
+    Driver:    d.label,
+    "Avg rank": d.avgRank,
+    "Σ delta":  d.sumDelta,
   };
   for (const s of sectorNums) {
     const e = stintSectors.find(r =>
       r.comp_driver === d.driver && r.comp_car_no === d.car && r.sector === s
     );
-    row[`S${s}`] = e ? `P${e.rank} (${e.sector_time_sec.toFixed(2)}s)` : "n/a";
+    row[`S${s}`] = e ? e.sector_time_sec : null;
+    row[`_rank_S${s}`] = e ? e.rank : null;   // kept off-display for tooltip-style format
   }
   return row;
 });
@@ -529,6 +531,18 @@ const tableRows = driverSummary.map(d => {
 ```js
 Inputs.table(tableRows, {
   sort: "Avg rank",
+  columns: ["Driver", "Avg rank", "Σ delta", ...sectorNums.map(s => `S${s}`)],
+  format: {
+    "Avg rank": v => v != null ? v.toFixed(1) : "—",
+    "Σ delta":  v => v != null ? `+${v.toFixed(2)}s` : "—",
+    ...Object.fromEntries(sectorNums.map(s => [`S${s}`,
+      (v, i) => {
+        if (v == null) return "n/a";
+        const r = tableRows[i][`_rank_S${s}`];
+        return `P${r} (${v.toFixed(2)}s)`;
+      }
+    ]))
+  },
   width: Object.fromEntries([
     ["Driver", 140], ["Avg rank", 72], ["Σ delta", 72],
     ...sectorNums.map(s => [`S${s}`, 110])
