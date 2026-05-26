@@ -24,6 +24,10 @@ function fmtSec(s) {
   if (s == null || isNaN(s)) return "—";
   return `${Math.floor(s/60)}:${(s%60).toFixed(3).padStart(6,'0')}`;
 }
+
+// Hard floor — GT3 theoretical sums under 7:40 (460s) are PDF-truncated
+// sector entries leaking into wrong slots, not real performance.
+const THEORETICAL_FLOOR_SEC = 460;
 ```
 
 <div class="page-hero">
@@ -68,7 +72,7 @@ html`<div class="landing-cards" style="margin:1rem 0 1.4rem;grid-template-column
 <div class="info-box">
   For each driver, we take their <strong>fastest time in each of the 9 Nordschleife sectors</strong> across the whole race (all stints they drove, outlaps & laps &gt; 11:30 excluded). Summed, that gives the lap they <em>could</em> have driven if every best sector had landed on the same lap.<br>
   <strong>Gap = Actual best lap − Theoretical best lap.</strong> A small gap means the driver consistently stitched their sectors together; a large gap means time was left on the table.<br>
-  Drivers with incomplete sector data (some S9 entries truncated in the PDF source) are excluded from the ranking.
+  Drivers with a theoretical sum under 7:40 are dropped — that's a known artefact of S9 truncation in the PDF source.
 </div>
 </details>
 
@@ -95,7 +99,12 @@ const driverRows = [...bestBy.entries()].map(([key, sectorMap]) => {
   const gap   = (theoretical != null && actual != null) ? actual - theoretical : null;
   return { car, driver, label: `#${car} ${driver}`, sectorBests, theoretical, actual, gap };
 })
-.filter(d => d.theoretical != null && d.actual != null)
+.filter(d =>
+  d.theoretical != null &&
+  d.actual != null &&
+  d.theoretical >= THEORETICAL_FLOOR_SEC &&
+  d.theoretical <= d.actual   // theoretical can never be slower than actual
+)
 .sort((a, b) => a.theoretical - b.theoretical);
 ```
 
