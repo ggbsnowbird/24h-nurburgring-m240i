@@ -69,7 +69,7 @@ function fmtSec(s) {
 </div>
 
 ```js
-html`<div class="landing-cards" style="margin:1rem 0 1.4rem">
+html`<div class="landing-cards" style="margin:1rem 0 1.4rem;grid-template-columns:repeat(3,1fr)">
   <a href="./overview" style="text-decoration:none;color:inherit">
     <div class="card" style="border-top:4px solid #00bcd4;cursor:pointer;padding:1.1rem 1.4rem;transition:transform .15s,box-shadow .15s"
       onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 22px rgba(0,188,212,.22)'"
@@ -86,6 +86,15 @@ html`<div class="landing-cards" style="margin:1rem 0 1.4rem">
       <div style="font-size:1.1em;font-weight:800;margin-bottom:.3rem">📊 Sector Analysis</div>
       <p style="font-size:.85em;opacity:.6;margin:0 0 .7rem;line-height:1.5">Per-sector deltas — where time is gained or lost on the Nordschleife.</p>
       <div style="font-size:.78em;color:var(--nbr-gold,#f0c040);font-weight:700">Open analysis →</div>
+    </div>
+  </a>
+  <a href="./theoretical-lap" style="text-decoration:none;color:inherit">
+    <div class="card" style="border-top:4px solid #9c27b0;cursor:pointer;padding:1.1rem 1.4rem;transition:transform .15s,box-shadow .15s"
+      onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 22px rgba(156,39,176,.25)'"
+      onmouseout="this.style.transform='';this.style.boxShadow=''">
+      <div style="font-size:1.1em;font-weight:800;margin-bottom:.3rem">⚡ Theoretical Lap</div>
+      <p style="font-size:.85em;opacity:.6;margin:0 0 .7rem;line-height:1.5">Sum of each driver's best sectors — the lap they could have driven.</p>
+      <div style="font-size:.78em;color:#c879d6;font-weight:700">Open analysis →</div>
     </div>
   </a>
 </div>`

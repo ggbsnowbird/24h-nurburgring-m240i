@@ -6,19 +6,21 @@ export default {
     {
       name: "M240i Racing Cup",
       pages: [
-        { name: "Overview",        path: "/m240i/overview" },
-        { name: "Stint Rankings",  path: "/m240i/stint-rankings" },
-        { name: "Sector Analysis", path: "/m240i/sector-analysis" },
-        { name: "About",           path: "/m240i/about" },
+        { name: "Overview",         path: "/m240i/overview" },
+        { name: "Stint Rankings",   path: "/m240i/stint-rankings" },
+        { name: "Sector Analysis",  path: "/m240i/sector-analysis" },
+        { name: "Theoretical Lap",  path: "/m240i/theoretical-lap" },
+        { name: "About",            path: "/m240i/about" },
       ]
     },
     {
       name: "SP9 GT3",
       pages: [
-        { name: "Overview",        path: "/sp9/overview" },
-        { name: "Stint Rankings",  path: "/sp9/stint-rankings" },
-        { name: "Sector Analysis", path: "/sp9/sector-analysis" },
-        { name: "About",           path: "/sp9/about" },
+        { name: "Overview",         path: "/sp9/overview" },
+        { name: "Stint Rankings",   path: "/sp9/stint-rankings" },
+        { name: "Sector Analysis",  path: "/sp9/sector-analysis" },
+        { name: "Theoretical Lap",  path: "/sp9/theoretical-lap" },
+        { name: "About",            path: "/sp9/about" },
       ]
     },
   ],

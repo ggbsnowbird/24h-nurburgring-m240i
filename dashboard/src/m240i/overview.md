@@ -34,37 +34,53 @@ html`<div class="hero">
 ```
 
 ```js
-html`<div class="landing-cards" style="margin:1.5rem 0">
+html`<div class="landing-cards" style="margin:1.5rem 0;grid-template-columns:repeat(3,1fr)">
 
   <a href="./stint-rankings" style="text-decoration:none;color:inherit">
     <div class="card" style="
       border-top:4px solid var(--nbr-green,#43632d);
-      cursor:pointer;padding:1.5rem;
+      cursor:pointer;padding:1.3rem;
       transition:transform .15s,box-shadow .15s;
     " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 24px rgba(67,99,45,.25)'"
        onmouseout="this.style.transform='';this.style.boxShadow=''">
-      <div style="font-size:1.4em;font-weight:800;margin-bottom:.4rem">🏁 Stint Rankings</div>
-      <p style="font-size:.9em;opacity:.65;margin:0 0 .8rem;line-height:1.5">
-        How each driver ranks vs the field — best lap & average pace,
-        compared to every driver on track in the same time window.
+      <div style="font-size:1.25em;font-weight:800;margin-bottom:.4rem">🏁 Stint Rankings</div>
+      <p style="font-size:.88em;opacity:.65;margin:0 0 .7rem;line-height:1.5">
+        How each driver ranks vs the field — best lap & average pace
+        in the same time window.
       </p>
-      <div style="font-size:.82em;color:var(--nbr-green-light,#5a8438);font-weight:700">Open analysis →</div>
+      <div style="font-size:.8em;color:var(--nbr-green-light,#5a8438);font-weight:700">Open analysis →</div>
     </div>
   </a>
 
   <a href="./sector-analysis" style="text-decoration:none;color:inherit">
     <div class="card" style="
       border-top:4px solid var(--nbr-gold,#f0c040);
-      cursor:pointer;padding:1.5rem;
+      cursor:pointer;padding:1.3rem;
       transition:transform .15s,box-shadow .15s;
     " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 24px rgba(240,192,64,.22)'"
        onmouseout="this.style.transform='';this.style.boxShadow=''">
-      <div style="font-size:1.4em;font-weight:800;margin-bottom:.4rem">📊 Sector Analysis</div>
-      <p style="font-size:.9em;opacity:.65;margin:0 0 .8rem;line-height:1.5">
-        Per-sector deltas across the Nordschleife — pick a stint,
-        see exactly which sectors cost time vs the fastest peer.
+      <div style="font-size:1.25em;font-weight:800;margin-bottom:.4rem">📊 Sector Analysis</div>
+      <p style="font-size:.88em;opacity:.65;margin:0 0 .7rem;line-height:1.5">
+        Per-sector deltas — pick a stint, see exactly which sectors
+        cost time vs the fastest peer.
       </p>
-      <div style="font-size:.82em;color:var(--nbr-gold,#f0c040);font-weight:700">Open analysis →</div>
+      <div style="font-size:.8em;color:var(--nbr-gold,#f0c040);font-weight:700">Open analysis →</div>
+    </div>
+  </a>
+
+  <a href="./theoretical-lap" style="text-decoration:none;color:inherit">
+    <div class="card" style="
+      border-top:4px solid #9c27b0;
+      cursor:pointer;padding:1.3rem;
+      transition:transform .15s,box-shadow .15s;
+    " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 24px rgba(156,39,176,.25)'"
+       onmouseout="this.style.transform='';this.style.boxShadow=''">
+      <div style="font-size:1.25em;font-weight:800;margin-bottom:.4rem">⚡ Theoretical Lap</div>
+      <p style="font-size:.88em;opacity:.65;margin:0 0 .7rem;line-height:1.5">
+        Sum of each driver's best sectors — the lap they could have
+        driven if everything had lined up.
+      </p>
+      <div style="font-size:.8em;color:#c879d6;font-weight:700">Open analysis →</div>
     </div>
   </a>
 
